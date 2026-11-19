@@ -892,16 +892,16 @@ function branchChecks(q) {
   const need = Math.round(q.loan * BRANCH.collateralRate);
   return [
     { ok: G.day >= BRANCH.minDay,
-      label: 'เปิดร้านเดิมมาแล้วอย่างน้อย ' + BRANCH.minDay + ' วัน',
+      label: 'เปิดร้านเดิมมาแล้ว ' + BRANCH.minDay + ' วันขึ้นไป',
       got: 'ตอนนี้วันที่ ' + G.day },
     { ok: collateral >= need,
-      label: 'สินทรัพย์ + เงินสด ไม่น้อยกว่า ' + Math.round(BRANCH.collateralRate * 100) + '% ของวงเงินกู้',
+      label: 'สินทรัพย์ + เงินสด ≥ ' + Math.round(BRANCH.collateralRate * 100) + '% ของวงเงินกู้',
       got: 'มี ' + collateral.toLocaleString() + '฿ · ต้องมี ' + need.toLocaleString() + '฿' },
     { ok: G.cash >= q.down,
       label: 'วางเงินดาวน์เอง ' + Math.round(BRANCH.downRate * 100) + '%',
       got: 'ดาวน์ ' + q.down.toLocaleString() + '฿ · เงินสดมี ' + Math.round(G.cash).toLocaleString() + '฿' },
     { ok: G.cash - q.down >= BRANCH.minCashAfter,
-      label: 'จ่ายดาวน์แล้วต้องเหลือเงินหมุนเวียน ' + BRANCH.minCashAfter.toLocaleString() + '฿',
+      label: 'จ่ายดาวน์แล้วเหลือเงินหมุนเวียน ≥ ' + BRANCH.minCashAfter.toLocaleString() + '฿',
       got: 'จะเหลือ ' + Math.round(G.cash - q.down).toLocaleString() + '฿' }
   ];
 }

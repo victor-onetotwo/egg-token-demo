@@ -47,62 +47,51 @@ const UI = (function () {
   }
 
   /* ---------- หน้าตั้งร้าน ---------- */
-  function showSetup() {
+  let setupStep = 1;
+
+  function showSetup(step) {
     G.screen = 'setup';
-    const money = n => n.toLocaleString() + '฿';
+    if (step) setupStep = step;
+    applyTheme(THEMES[sel.theme]);
+    if (setupStep === 1) showSetupStep1(); else showSetupStep2();
+  }
+
+  const money = n => Math.round(n).toLocaleString() + '฿';
+
+  function bindCards() {
+    el.sheet.querySelectorAll('.card').forEach(b => {
+      if (sel[b.dataset.group] === b.dataset.key) b.classList.add('on');
+      b.addEventListener('click', () => {
+        sel[b.dataset.group] = b.dataset.key;
+        SFX.unlock(); SFX.click();
+        showSetup();
+      });
+    });
+  }
+
+  /* ขั้นที่ 1 · โหมดกับประเภทร้าน */
+  function showSetupStep1() {
     const shopCards = Object.values(SHOPS).map(s => `
-      <button class="card" data-group="shop" data-key="${s.key}" data-cost="${s.setup}">
+      <button class="card" data-group="shop" data-key="${s.key}">
         <span class="card-icon">${s.icon}</span>
         <span class="card-title">${s.name}</span>
         <span class="card-cost">${money(s.setup)}</span>
         <span class="card-sub">${s.product} ${s.price}฿<br>${s.ing[0].name} + ${s.ing[1].name}</span>
       </button>`).join('');
-    const locCards = Object.values(LOCATIONS).map(l => `
-      <button class="card" data-group="loc" data-key="${l.key}" data-cost="${l.deposit}">
-        <span class="card-title">${l.name}</span>
-        <span class="card-cost">${money(l.deposit)}</span>
-        <span class="card-sub">ค่าเช่า ${Math.round(l.rent * MODES[sel.mode].scale).toLocaleString()}฿/วัน<br>${l.note}</span>
-      </button>`).join('');
-    const themeCards = Object.values(THEMES).map(t => `
-      <button class="card theme-${t.key}" data-group="theme" data-key="${t.key}" data-cost="${t.setup}">
-        <span class="swatch"><i style="background:${t.pal.floor}"></i><i style="background:${t.pal.counter}"></i><i style="background:${t.pal.accent}"></i></span>
-        <span class="card-title">${t.name}</span>
-        <span class="card-cost">${money(t.setup)}</span>
-        <span class="card-sub">${t.short}</span>
-      </button>`).join('');
 
     openSheet(`
       <div class="sheet-head">
-        <div class="kicker"><span class="pix">EGG TOKEN · DEMO</span></div>
-        <h1>ตั้งร้านก่อนเปิดวันแรก</h1>
-        <p class="lead">เงินทุนตั้งต้น ${money(RULES.startCash)} · ทั้งสามอย่างคือเงินลงทุนที่ต้องจ่ายก่อนเปิดร้าน
-        เลือกเสร็จจะเหลือเป็นเงินสดไว้หมุนในร้าน เล่น 7 วัน</p>
+        <div class="kicker"><span class="pix">EGG TOKEN · DEMO</span> · ขั้นที่ 1 จาก 2</div>
+        <h1>เลือกโหมดและประเภทร้าน</h1>
+        <p class="lead">เงินทุนตั้งต้น ${money(RULES.startCash)} · ค่าอุปกรณ์คือเงินลงทุนก้อนแรกที่ต้องจ่ายก่อนเปิดร้าน</p>
       </div>
       <div class="group"><h2>โหมดการเล่น</h2>
         <div class="seg" id="mode-seg">${Object.values(MODES).map(m =>
           `<button data-mode="${m.key}"><b>${m.name} · ${m.time}</b><span>${m.desc}</span></button>`).join('')}</div>
       </div>
-      <div class="group"><h2>1 · ประเภทร้าน · ค่าอุปกรณ์</h2><div class="cards">${shopCards}</div></div>
-      <div class="group"><h2>2 · ทำเล · ค่าเซ้ง และค่าเช่ารายวัน</h2><div class="cards">${locCards}</div></div>
-      <div class="group"><h2>3 · ธีม · ค่าตกแต่งร้าน</h2><div class="cards">${themeCards}</div></div>
-      <div class="invest-bar">
-        <div><span>ทุนตั้งต้น</span><b>${money(RULES.startCash)}</b></div>
-        <div><span>ลงทุนที่เลือก</span><b class="neg" id="inv-total">0฿</b></div>
-        <div class="hi"><span>เหลือเป็นเงินสด</span><b id="inv-left">0฿</b></div>
-        <div><span>ค่าเช่าทุกวัน</span><b id="inv-rent">0฿</b></div>
-      </div>
-      <div class="sheet-foot"><button class="btn primary" id="btn-start">เปิดร้าน</button></div>
+      <div class="group"><h2>ประเภทร้าน · ค่าอุปกรณ์</h2><div class="cards">${shopCards}</div></div>
+      <div class="sheet-foot"><button class="btn primary" id="btn-next1">ถัดไป · เลือกทำเลและธีม</button></div>
     `, 'setup');
-
-    function syncInvest() {
-      const total = SHOPS[sel.shop].setup + LOCATIONS[sel.loc].deposit + THEMES[sel.theme].setup;
-      const left = RULES.startCash - total;
-      $('inv-total').textContent = '-' + money(total);
-      $('inv-left').textContent = money(left);
-      $('inv-left').className = left < 0 ? 'neg' : '';
-      $('inv-rent').textContent = money(Math.round(LOCATIONS[sel.loc].rent * MODES[sel.mode].scale)) + ' / วัน';
-      $('btn-start').disabled = left < 0;
-    }
 
     el.sheet.querySelectorAll('#mode-seg button').forEach(b => {
       b.classList.toggle('on', b.dataset.mode === sel.mode);
@@ -112,24 +101,62 @@ const UI = (function () {
         showSetup();
       });
     });
-    el.sheet.querySelectorAll('.card').forEach(b => {
-      if (sel[b.dataset.group] === b.dataset.key) b.classList.add('on');
-      b.addEventListener('click', () => {
-        sel[b.dataset.group] = b.dataset.key;
-        el.sheet.querySelectorAll(`.card[data-group="${b.dataset.group}"]`).forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        SFX.unlock(); SFX.click();
-        if (b.dataset.group === 'theme') applyTheme(THEMES[b.dataset.key]);
-        syncInvest();
-      });
-    });
+    bindCards();
+    $('btn-next1').addEventListener('click', () => { SFX.click(); showSetup(2); });
+  }
+
+  /* ขั้นที่ 2 · ทำเลกับธีม พร้อมสรุปเงินลงทุน */
+  function showSetupStep2() {
+    const scale = MODES[sel.mode].scale;
+    const locCards = Object.values(LOCATIONS).map(l => `
+      <button class="card" data-group="loc" data-key="${l.key}">
+        <span class="card-title">${l.name}</span>
+        <span class="card-cost">${money(l.deposit)}</span>
+        <span class="card-sub">ค่าเช่า ${money(l.rent * scale)}/วัน<br>${l.note}</span>
+      </button>`).join('');
+    const themeCards = Object.values(THEMES).map(t => `
+      <button class="card theme-${t.key}" data-group="theme" data-key="${t.key}">
+        <span class="swatch"><i style="background:${t.pal.floor}"></i><i style="background:${t.pal.counter}"></i><i style="background:${t.pal.accent}"></i></span>
+        <span class="card-title">${t.name}</span>
+        <span class="card-cost">${money(t.setup)}</span>
+        <span class="card-sub">${t.short}</span>
+      </button>`).join('');
+
+    openSheet(`
+      <div class="sheet-head">
+        <div class="kicker"><span class="pix">EGG TOKEN · DEMO</span> · ขั้นที่ 2 จาก 2</div>
+        <h1>เลือกทำเลและธีม</h1>
+        <p class="lead">${SHOPS[sel.shop].name} · โหมด${MODES[sel.mode].name} · ที่เหลือจากเงินลงทุนคือเงินสดที่ใช้หมุนในร้าน</p>
+      </div>
+      <div class="group"><h2>ทำเล · ค่าเซ้ง และค่าเช่ารายวัน</h2><div class="cards">${locCards}</div></div>
+      <div class="group"><h2>ธีม · ค่าตกแต่งร้าน</h2><div class="cards">${themeCards}</div></div>
+      <div class="invest-bar">
+        <div><span>ทุนตั้งต้น</span><b>${money(RULES.startCash)}</b></div>
+        <div><span>ลงทุนที่เลือก</span><b class="neg" id="inv-total">0฿</b></div>
+        <div class="hi"><span>เหลือเป็นเงินสด</span><b id="inv-left">0฿</b></div>
+        <div><span>ค่าเช่าทุกวัน</span><b id="inv-rent">0฿</b></div>
+      </div>
+      <div class="sheet-foot two">
+        <button class="btn" id="btn-back1">ย้อนกลับ</button>
+        <button class="btn primary" id="btn-start">เปิดร้าน</button>
+      </div>
+    `, 'setup');
+
+    const total = SHOPS[sel.shop].setup + LOCATIONS[sel.loc].deposit + THEMES[sel.theme].setup;
+    const left = RULES.startCash - total;
+    $('inv-total').textContent = '-' + money(total);
+    $('inv-left').textContent = money(left);
+    $('inv-left').className = left < 0 ? 'neg' : '';
+    $('inv-rent').textContent = money(LOCATIONS[sel.loc].rent * scale) + ' / วัน';
+    $('btn-start').disabled = left < 0;
+
+    bindCards();
+    $('btn-back1').addEventListener('click', () => { SFX.click(); showSetup(1); });
     $('btn-start').addEventListener('click', () => {
       SFX.unlock();
       closeSheet();
       newGame(sel.shop, sel.theme, sel.loc, sel.mode);
     });
-    applyTheme(THEMES[sel.theme]);
-    syncInvest();
   }
 
   /* ---------- ก่อนเปิดร้านแต่ละวัน ---------- */
@@ -299,13 +326,12 @@ const UI = (function () {
         ${r.platformDue ? `<div class="row"><span>ค้างรับจากแพลตฟอร์ม · เข้าพรุ่งนี้</span><b>${baht(r.platformDue)}</b></div>` : ''}
       </div>
       <div class="rows">
-        <div class="row"><span>เสิร์ฟได้ / เดินออก</span><b>${r.served} / <span class="${r.left ? 'neg' : ''}">${r.left}</span></b></div>
-        ${DAYS[r.day - 1].rating ? `<div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>` : ''}
+        <div class="row"><span>เสิร์ฟได้ / เดินออก${DAYS[r.day - 1].rating ? ' · เรตติ้ง' : ''}</span><b>${r.served} / <span class="${r.left ? 'neg' : ''}">${r.left}</span>${DAYS[r.day - 1].rating ? ' · ' + ratingLabel() : ''}</b></div>
         <div class="row"><span>สต็อกคงเหลือ</span><b>${s.ing[0].name} ${r.stock.a} · ${s.ing[1].name} ${r.stock.b}</b></div>
       </div>
       ${r.branch ? `<div class="rows">
-        <div class="row"><span>สาขา 2 · ${r.branch.name} · เปิดมา ${r.branch.daysOpen} วัน</span><b class="${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? 'pos' : 'neg'}">${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? '+' : ''}${baht(r.branch.revenue - r.branch.cost - r.branch.inst)}</b></div>
-        <div class="row"><span>พนักงานสาขา ${r.branch.staff} คน · หนี้คงเหลือ</span><b>${baht(r.branch.balance)}</b></div>
+        <div class="row"><span>สาขา 2 · ${r.branch.staff} คน · เปิดมา ${r.branch.daysOpen} วัน</span><b class="${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? 'pos' : 'neg'}">${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? '+' : ''}${baht(r.branch.revenue - r.branch.cost - r.branch.inst)}</b></div>
+        <div class="row"><span>หนี้คงเหลือ</span><b>${baht(r.branch.balance)}</b></div>
       </div>` : ''}
       <p class="note">${r.left
         ? 'ลูกค้าที่จ่ายแล้วแต่ไม่ได้ของ ต้องคืนเงิน ยอดขายไม่ถูกหักก็จริง แต่เงินสดหายไปแล้ว และเรตติ้งก็เสียด้วย'
@@ -479,27 +505,24 @@ const UI = (function () {
       <div class="sheet-head">
         <div class="kicker"><span class="pix">DAY ${G.day}</span> · ขยายกิจการ</div>
         <h1>กู้เงินเปิดสาขา 2</h1>
-        <p class="lead">สาขาใหม่ใช้แบรนด์กับเมนูเดิม เลือกแค่ทำเล · ธนาคารดูหลักประกันกับเงินดาวน์ก่อนอนุมัติ</p>
       </div>
-      <div class="group"><h2>ทำเลสาขาใหม่</h2><div class="cards">${locCards}</div></div>
+      <div class="group"><h2>ทำเลสาขาใหม่ · ใช้แบรนด์กับเมนูเดิม</h2><div class="cards">${locCards}</div></div>
       <div class="checks">
         ${checks.map(c => `<div class="chk ${c.ok ? 'yes' : 'no'}"><i>${c.ok ? '✓' : '✕'}</i><span>${c.label}<em>${c.got}</em></span></div>`).join('')}
       </div>
-      <div class="group"><h2>พนักงานประจำสาขา</h2>
-        <div class="seg" id="bstaff-seg">
-          <button data-bstaff="1" class="${branchSel.staff === 1 ? 'on' : ''}"><b>1 คน</b><span>ทำได้ราว 70% ของกำลัง</span></button>
-          <button data-bstaff="2" class="${branchSel.staff === 2 ? 'on' : ''}"><b>2 คน</b><span>เต็มกำลัง แต่ค่าแรงเพิ่ม</span></button>
-        </div>
+      <div class="seg" id="bstaff-seg">
+        <button data-bstaff="1" class="${branchSel.staff === 1 ? 'on' : ''}"><b>พนักงานสาขา 1 คน</b><span>ทำได้ราว 70% ของกำลัง</span></button>
+        <button data-bstaff="2" class="${branchSel.staff === 2 ? 'on' : ''}"><b>พนักงานสาขา 2 คน</b><span>เต็มกำลัง ค่าแรงเพิ่ม</span></button>
       </div>
       <div class="rows">
         <div class="row"><span>ค่าเปิดสาขา</span><b>${q.cost.toLocaleString()}฿</b></div>
         <div class="row"><span>เงินดาวน์ที่ต้องจ่ายวันนี้</span><b class="neg">-${q.down.toLocaleString()}฿</b></div>
-        <div class="row"><span>วงเงินกู้ · ดอกเบี้ยรวม ${Math.round(BRANCH.interest * 100)}%</span><b>${q.loan.toLocaleString()}฿</b></div>
+        <div class="row"><span>วงเงินกู้ · ดอกเบี้ย ${Math.round(BRANCH.interest * 100)}%</span><b>${q.loan.toLocaleString()}฿</b></div>
         <div class="row total"><span>ผ่อน ${q.term} งวด วันละ</span><b>${q.installment.toLocaleString()}฿</b></div>
       </div>
       <p class="note">${ok
-        ? 'ผ่านเกณฑ์ธนาคาร · สาขาใหม่จะยังไม่เต็มกำลังในวันแรก แล้วค่อย ๆ ขึ้นภายใน 3–4 วัน'
-        : 'ยังไม่ผ่านเกณฑ์ ทำกำไรอีกวันแล้วค่อยกลับมาดูใหม่ ข้อเสนอนี้จะขึ้นให้อีกทุกคืน'}</p>
+        ? 'สาขาใหม่ยังไม่เต็มกำลังในวันแรก แล้วค่อยขึ้นใน 3–4 วัน'
+        : 'ยังไม่ผ่านเกณฑ์ ข้อเสนอนี้จะขึ้นให้อีกทุกคืน'}</p>
       <div class="sheet-foot two">
         <button class="btn" id="btn-bno">ยังไม่เปิด</button>
         <button class="btn primary" id="btn-byes" ${ok ? '' : 'disabled'}>กู้และเปิดสาขา</button>
@@ -542,13 +565,12 @@ const UI = (function () {
         <p class="lead">${invested ? 'คุณเลือกลงทุนเพิ่มกำลัง เงินสดลดลงแต่รับคิวได้มากขึ้นในวันถัดไป' : 'คุณเลือกเก็บเงินสดไว้ ปลอดภัยกว่า แต่คิวล้นยังเป็นปัญหาเดิม'}</p>
       </div>
       <div class="rows">
-        <div class="row"><span>เงินลงทุนตอนตั้งร้าน</span><b class="neg">-${G.invest.total.toLocaleString()}฿</b></div>
         <div class="row total"><span>ยอดขายรวม 7 วัน</span><b class="pos">${sales.toLocaleString()}฿</b></div>
         <div class="row"><span>กำไร-ขาดทุนรวม 7 วัน</span><b class="${profitAll >= 0 ? 'pos' : 'neg'}">${profitAll >= 0 ? '+' : ''}${Math.round(profitAll).toLocaleString()}฿</b></div>
         <div class="row"><span>เงินสดคงเหลือ</span><b>${Math.round(G.cash).toLocaleString()}฿</b></div>
         <div class="row"><span>เสิร์ฟได้ / เดินออก</span><b>${served} / <span class="${left ? 'neg' : ''}">${left}</span></b></div>
         <div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>
-        ${G.branch ? `<div class="row"><span>สาขา 2 · ${G.branch.name}</span><b>ขาย ${Math.round(G.branch.totalRevenue).toLocaleString()}฿ · หนี้เหลือ ${Math.round(G.branch.balance).toLocaleString()}฿</b></div>` : ''}
+        ${G.branch ? `<div class="row"><span>สาขา 2 · ขาย / หนี้เหลือ</span><b>${Math.round(G.branch.totalRevenue).toLocaleString()} / ${Math.round(G.branch.balance).toLocaleString()}฿</b></div>` : ''}
       </div>
       <div class="rows small">${rows}</div>
       <p class="note">เงินสดบอกว่าร้านอยู่ได้ไหม เรตติ้งบอกว่าคนอยากกลับมาไหม · ตรงไหนที่อยากให้มีคน เครื่อง
@@ -558,7 +580,7 @@ const UI = (function () {
         <button class="btn primary" id="btn-again">เล่นอีกครั้ง</button>
       </div>
     `, 'ending');
-    $('btn-again').addEventListener('click', () => { closeSheet(); showSetup(); });
+    $('btn-again').addEventListener('click', () => { closeSheet(); showSetup(1); });
     $('btn-ci').addEventListener('click', () => { window.location.href = 'ci.html'; });
   }
 
@@ -636,7 +658,7 @@ const UI = (function () {
       if (map[e.key]) commandStation(map[e.key]);
       if (e.key === 'e' || e.key === 'E') openTokens();
     });
-    showSetup();
+    showSetup(1);
   }
 
   return {
