@@ -5,7 +5,7 @@
 
 const UI = (function () {
   let el = {};
-  let sel = { shop: 'coffee', theme: 'modern', loc: 'office' };
+  let sel = { shop: 'coffee', theme: 'modern', loc: 'office', mode: 'demo' };
   let toastT = 0;
   let lastHint = null;
   let orderDraft = { a: 0, b: 0 };
@@ -16,6 +16,15 @@ const UI = (function () {
   function openSheet(html, cls) {
     el.sheet.className = 'sheet ' + (cls || '');
     el.sheet.innerHTML = html;
+    // ทุกอย่างที่ไม่ใช่หัวเรื่องกับแถวปุ่ม ย้ายไปอยู่ในกล่องกลางที่ย่อ-ขยายได้
+    const kids = Array.prototype.filter.call(el.sheet.children,
+      n => !n.classList.contains('sheet-head') && !n.classList.contains('sheet-foot'));
+    if (kids.length) {
+      const body = document.createElement('div');
+      body.className = 'sheet-body';
+      el.sheet.insertBefore(body, kids[0]);
+      kids.forEach(k => body.appendChild(k));
+    }
     el.overlay.classList.remove('hidden');
     if (G.screen === 'play') G.paused = true;
   }
@@ -23,6 +32,18 @@ const UI = (function () {
     el.overlay.classList.add('hidden');
     el.sheet.innerHTML = '';
     if (G.screen === 'play') G.paused = false;
+    fitCanvas();
+  }
+
+  /* จอเล่นเป็นสี่เหลี่ยมจัตุรัส ขนาดเท่าที่พื้นที่เหลือให้ ไม่ต้องเลื่อนจอ */
+  function fitCanvas() {
+    if (!canvas) return;
+    const stage = $('stage');
+    if (!stage) return;
+    const r = stage.getBoundingClientRect();
+    const size = Math.max(140, Math.floor(Math.min(r.width, r.height)));
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
   }
 
   /* ---------- หน้าตั้งร้าน ---------- */
@@ -34,20 +55,20 @@ const UI = (function () {
         <span class="card-icon">${s.icon}</span>
         <span class="card-title">${s.name}</span>
         <span class="card-cost">${money(s.setup)}</span>
-        <span class="card-sub">${s.setupNote}<br>${s.product} ${s.price}฿ · ${s.ing[0].name} + ${s.ing[1].name}</span>
+        <span class="card-sub">${s.product} ${s.price}฿<br>${s.ing[0].name} + ${s.ing[1].name}</span>
       </button>`).join('');
     const locCards = Object.values(LOCATIONS).map(l => `
       <button class="card" data-group="loc" data-key="${l.key}" data-cost="${l.deposit}">
         <span class="card-title">${l.name}</span>
         <span class="card-cost">${money(l.deposit)}</span>
-        <span class="card-sub">ค่าเช่า ${l.rent}฿/วัน<br>${l.note}</span>
+        <span class="card-sub">ค่าเช่า ${Math.round(l.rent * MODES[sel.mode].scale).toLocaleString()}฿/วัน<br>${l.note}</span>
       </button>`).join('');
     const themeCards = Object.values(THEMES).map(t => `
       <button class="card theme-${t.key}" data-group="theme" data-key="${t.key}" data-cost="${t.setup}">
         <span class="swatch"><i style="background:${t.pal.floor}"></i><i style="background:${t.pal.counter}"></i><i style="background:${t.pal.accent}"></i></span>
         <span class="card-title">${t.name}</span>
         <span class="card-cost">${money(t.setup)}</span>
-        <span class="card-sub">${t.desc}</span>
+        <span class="card-sub">${t.short}</span>
       </button>`).join('');
 
     openSheet(`
@@ -55,16 +76,20 @@ const UI = (function () {
         <div class="kicker"><span class="pix">EGG TOKEN · DEMO</span></div>
         <h1>ตั้งร้านก่อนเปิดวันแรก</h1>
         <p class="lead">เงินทุนตั้งต้น ${money(RULES.startCash)} · ทั้งสามอย่างคือเงินลงทุนที่ต้องจ่ายก่อนเปิดร้าน
-        เลือกเสร็จจะเหลือเป็นเงินสดไว้หมุนในร้าน เดโมนี้ยาว 7 วัน วันละ ${RULES.dayLength} วินาที</p>
+        เลือกเสร็จจะเหลือเป็นเงินสดไว้หมุนในร้าน เล่น 7 วัน</p>
+      </div>
+      <div class="group"><h2>โหมดการเล่น</h2>
+        <div class="seg" id="mode-seg">${Object.values(MODES).map(m =>
+          `<button data-mode="${m.key}"><b>${m.name} · ${m.time}</b><span>${m.desc}</span></button>`).join('')}</div>
       </div>
       <div class="group"><h2>1 · ประเภทร้าน · ค่าอุปกรณ์</h2><div class="cards">${shopCards}</div></div>
       <div class="group"><h2>2 · ทำเล · ค่าเซ้ง และค่าเช่ารายวัน</h2><div class="cards">${locCards}</div></div>
       <div class="group"><h2>3 · ธีม · ค่าตกแต่งร้าน</h2><div class="cards">${themeCards}</div></div>
-      <div class="rows" id="invest-box">
-        <div class="row"><span>เงินทุนตั้งต้น</span><b>${money(RULES.startCash)}</b></div>
-        <div class="row"><span>เงินลงทุนที่เลือก</span><b class="neg" id="inv-total">0฿</b></div>
-        <div class="row total"><span>เหลือเป็นเงินสดหมุนในร้าน</span><b id="inv-left">0฿</b></div>
-        <div class="row"><span>ค่าเช่าที่ต้องจ่ายทุกวัน</span><b id="inv-rent">0฿</b></div>
+      <div class="invest-bar">
+        <div><span>ทุนตั้งต้น</span><b>${money(RULES.startCash)}</b></div>
+        <div><span>ลงทุนที่เลือก</span><b class="neg" id="inv-total">0฿</b></div>
+        <div class="hi"><span>เหลือเป็นเงินสด</span><b id="inv-left">0฿</b></div>
+        <div><span>ค่าเช่าทุกวัน</span><b id="inv-rent">0฿</b></div>
       </div>
       <div class="sheet-foot"><button class="btn primary" id="btn-start">เปิดร้าน</button></div>
     `, 'setup');
@@ -75,10 +100,18 @@ const UI = (function () {
       $('inv-total').textContent = '-' + money(total);
       $('inv-left').textContent = money(left);
       $('inv-left').className = left < 0 ? 'neg' : '';
-      $('inv-rent').textContent = money(LOCATIONS[sel.loc].rent) + ' / วัน';
+      $('inv-rent').textContent = money(Math.round(LOCATIONS[sel.loc].rent * MODES[sel.mode].scale)) + ' / วัน';
       $('btn-start').disabled = left < 0;
     }
 
+    el.sheet.querySelectorAll('#mode-seg button').forEach(b => {
+      b.classList.toggle('on', b.dataset.mode === sel.mode);
+      b.addEventListener('click', () => {
+        sel.mode = b.dataset.mode;
+        SFX.unlock(); SFX.click();
+        showSetup();
+      });
+    });
     el.sheet.querySelectorAll('.card').forEach(b => {
       if (sel[b.dataset.group] === b.dataset.key) b.classList.add('on');
       b.addEventListener('click', () => {
@@ -93,7 +126,7 @@ const UI = (function () {
     $('btn-start').addEventListener('click', () => {
       SFX.unlock();
       closeSheet();
-      newGame(sel.shop, sel.theme, sel.loc);
+      newGame(sel.shop, sel.theme, sel.loc, sel.mode);
     });
     applyTheme(THEMES[sel.theme]);
     syncInvest();
@@ -117,12 +150,12 @@ const UI = (function () {
       </div>
       <ul class="facts">
         <li>เงินสด <b>${Math.round(G.cash).toLocaleString()}฿</b> · สต็อก ${stockLine}</li>
-        <li>ค่าเช่า ${G.loc.rent.toLocaleString()}฿ และค่าแรง หักตอนปิดบัญชีสิ้นวัน</li>
+        <li>ค่าเช่า ${dailyRent().toLocaleString()}฿ และค่าแรง หักตอนปิดบัญชีสิ้นวัน</li>
         <li>${staffLine}</li>
         ${deliv}${rider}${chat}
-        <li>E.Token วันนี้ ${RULES.tokensPerDay} ครั้ง</li>
+        <li>E.Token วันนี้ ${G.mode.tokens} ครั้ง</li>
       </ul>
-      <div class="sheet-foot"><button class="btn primary" id="btn-open">เปิดร้าน · ${RULES.dayLength} วินาที</button></div>
+      <div class="sheet-foot"><button class="btn primary" id="btn-open">เปิดร้าน · ${G.mode.time}</button></div>
     `, 'intro');
     $('btn-open').addEventListener('click', () => { closeSheet(); openStore(); });
   }
@@ -138,7 +171,7 @@ const UI = (function () {
     el.stock.classList.toggle('low', G.stock.a <= 2 || G.stock.b <= 2);
     if (G.closing) {
       el.clock.textContent = 'เคลียร์คิว ' + Math.max(0, G.graceLeft).toFixed(1) + 's';
-      el.bar.style.width = Math.max(0, (G.graceLeft / RULES.closingGrace) * 100) + '%';
+      el.bar.style.width = Math.max(0, (G.graceLeft / G.mode.grace) * 100) + '%';
     } else {
       el.clock.textContent = G.timeLeft.toFixed(1) + 's';
       el.bar.style.width = Math.max(0, (G.timeLeft / G.dayLen) * 100) + '%';
@@ -433,8 +466,8 @@ const UI = (function () {
         <div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>
       </div>
       <div class="rows small">${rows}</div>
-      <p class="note">เงินสดบอกว่าร้านอยู่ได้ไหม เรตติ้งบอกว่าคนอยากกลับมาไหม สองอันนี้ไม่ใช่เรื่องเดียวกัน</p>
-      <p class="note">ตรงไหนที่คุณอยากให้มีคนช่วย เครื่องช่วย หรือ E.Token ช่วย คือจุดที่ Egg Token เข้าไปทำงานได้จริง</p>
+      <p class="note">เงินสดบอกว่าร้านอยู่ได้ไหม เรตติ้งบอกว่าคนอยากกลับมาไหม · ตรงไหนที่อยากให้มีคน เครื่อง
+      หรือ E.Token ช่วย คือจุดที่ Egg Token เข้าไปทำงานได้จริง</p>
       <div class="sheet-foot two">
         <button class="btn" id="btn-ci">ดูหน้า CI</button>
         <button class="btn primary" id="btn-again">เล่นอีกครั้ง</button>
@@ -497,6 +530,9 @@ const UI = (function () {
     ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     buildStationBar();
+    fitCanvas();
+    window.addEventListener('resize', fitCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 120));
 
     canvas.addEventListener('pointerdown', e => {
       const r = canvas.getBoundingClientRect();
@@ -519,7 +555,7 @@ const UI = (function () {
   }
 
   return {
-    init, showSetup, showDayIntro, syncHud, hint, toast,
+    init, showSetup, showDayIntro, syncHud, hint, toast, fitCanvas,
     showSummary, showEnding: renderEnding, openTokens, rebuildStations: buildStationBar
   };
 })();

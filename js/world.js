@@ -161,6 +161,122 @@ function drawRoom(ctx, pal, state) {
   px(ctx, ENTRY_X * TILE + 2, 11 * TILE + 4, TILE - 4, TILE - 6, shade(pal.rug, -10));
 }
 
+/* ===========================================================
+   ของตกแต่งร้าน วาดเพิ่มให้ร้านดูมีชีวิต
+   ไม่กินช่องเดิน เป็นภาพอย่างเดียว
+   =========================================================== */
+
+function drawPlant(ctx, x, y, pal, big) {
+  const g = pal.plant || '#4f9b5f', pot = pal.pot || '#8a6a52';
+  px(ctx, x + 4, y + 10, 8, 5, pot);
+  px(ctx, x + 3, y + 9, 10, 2, shade(pot, 22));
+  px(ctx, x + 6, y + 5, 4, 5, shade(g, -25));
+  px(ctx, x + 3, y + 4, 4, 4, g);
+  px(ctx, x + 9, y + 3, 4, 5, g);
+  px(ctx, x + 6, y + 1, 4, 4, shade(g, 18));
+  if (big) { px(ctx, x + 1, y + 6, 3, 3, g); px(ctx, x + 12, y + 7, 3, 3, shade(g, 18)); }
+}
+
+function drawTableSet(ctx, x, y, pal) {
+  const w = pal.wood || '#b08968';
+  px(ctx, x + 2, y + 2, 12, 7, w);
+  px(ctx, x + 2, y + 2, 12, 2, shade(w, 24));
+  px(ctx, x + 4, y + 9, 2, 4, shade(w, -30));
+  px(ctx, x + 10, y + 9, 2, 4, shade(w, -30));
+  px(ctx, x - 2, y + 4, 4, 4, pal.accent2);
+  px(ctx, x + 14, y + 4, 4, 4, pal.accent2);
+}
+
+function drawShelf(ctx, x, y, pal, item) {
+  const w = pal.wood || '#b08968';
+  px(ctx, x, y + 7, 22, 2, w);
+  px(ctx, x + 2, y + 2, 4, 5, shade(pal.counter, -18));
+  px(ctx, x + 8, y + 1, 5, 6, shade(pal.counter, -8));
+  px(ctx, x + 15, y + 3, 5, 4, pal.accent2);
+  if (item) drawArt(ctx, item, x + 7, y, 1);
+}
+
+function drawMenuBoard(ctx, x, y, pal) {
+  px(ctx, x, y, 34, 13, shade(pal.wall, 30));
+  px(ctx, x + 1, y + 1, 32, 11, shade(pal.wall, -14));
+  for (let i = 0; i < 3; i++) {
+    px(ctx, x + 3, y + 3 + i * 3, 16 - i * 3, 1, pal.counter);
+    px(ctx, x + 26, y + 3 + i * 3, 5, 1, pal.neon || '#f0c13b');
+  }
+}
+
+function drawSink(ctx, x, y, pal) {
+  px(ctx, x, y + 4, 20, 10, shade(pal.counter, -22));
+  px(ctx, x + 2, y + 6, 16, 6, shade(pal.counter, -45));
+  px(ctx, x + 9, y + 1, 2, 5, pal.counterEdge);
+  px(ctx, x + 9, y + 1, 5, 2, pal.counterEdge);
+}
+
+function drawBin(ctx, x, y, pal) {
+  px(ctx, x + 4, y + 5, 9, 10, shade(pal.counter, -40));
+  px(ctx, x + 3, y + 3, 11, 3, shade(pal.counter, -20));
+  px(ctx, x + 7, y + 1, 3, 2, shade(pal.counter, -20));
+}
+
+function drawSign(ctx, x, y, pal) {
+  const w = pal.wood || '#b08968';
+  px(ctx, x + 2, y + 2, 12, 11, shade(w, 10));
+  px(ctx, x + 3, y + 3, 10, 9, shade(w, -34));
+  px(ctx, x + 5, y + 5, 6, 1, pal.counter);
+  px(ctx, x + 5, y + 7, 4, 1, pal.counter);
+  px(ctx, x + 5, y + 9, 7, 1, pal.neon || '#f0c13b');
+  px(ctx, x + 1, y + 13, 14, 2, shade(w, -45));
+}
+
+function drawLamp(ctx, x, y, pal, lit) {
+  px(ctx, x + 7, 0, 2, y, shade(pal.wall, 34));
+  px(ctx, x + 3, y, 10, 3, pal.accent2);
+  px(ctx, x + 5, y + 3, 6, 2, lit ? (pal.neon || '#ffd34d') : shade(pal.counter, -20));
+}
+
+function drawClock(ctx, x, y, pal, t) {
+  px(ctx, x, y, 11, 11, shade(pal.wall, 40));
+  px(ctx, x + 1, y + 1, 9, 9, pal.counter);
+  const a = t * 1.2;
+  px(ctx, x + 5, y + 5, 1 + Math.round(Math.cos(a) * 2), 1, pal.accent);
+  px(ctx, x + 5, y + 3, 1, 3, pal.accent);
+}
+
+function drawSteam(ctx, x, y, t, color) {
+  for (let i = 0; i < 3; i++) {
+    const ph = (t * 1.6 + i * 0.5) % 1;
+    const sy = y - ph * 10;
+    const sx = x + Math.round(Math.sin((t * 3) + i) * 2);
+    ctx.globalAlpha = 0.45 * (1 - ph);
+    px(ctx, sx + i * 3, sy, 2, 2, color || '#ffffff');
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* วาดของตกแต่งทั้งหมด เรียกหลัง drawRoom */
+function drawDecor(ctx, pal, state) {
+  const t = state.t || 0;
+  // ผนังหลัง
+  drawMenuBoard(ctx, 6 * TILE + 4, 2, pal);
+  drawClock(ctx, 4 * TILE + 2, 2, pal, t);
+  // ชั้นวางของฝั่งซ้าย และอ่างล้างฝั่งขวา
+  drawShelf(ctx, 0, TILE + 2, pal, state.shopItem);
+  drawSink(ctx, 10 * TILE + 2, TILE + 1, pal);
+  // โคมไฟเหนือเคาน์เตอร์
+  drawLamp(ctx, 3 * TILE, 18, pal, true);
+  drawLamp(ctx, 9 * TILE + 8, 18, pal, true);
+  // ไอน้ำจากเครื่อง
+  if (state.machine && state.machine.some(m => m.busy)) {
+    drawSteam(ctx, MACHINE_TILES[0][0] * TILE + 5, MACHINE_TILES[0][1] * TILE + 2, t, pal.counter);
+  }
+  // ฝั่งลูกค้า
+  drawPlant(ctx, 0, 5 * TILE + 1, pal, true);
+  drawPlant(ctx, 11 * TILE, 10 * TILE + 1, pal, false);
+  drawTableSet(ctx, 11 * TILE - 2, 7 * TILE, pal);
+  drawBin(ctx, 11 * TILE, 5 * TILE + 2, pal);
+  drawSign(ctx, 0, 9 * TILE + 2, pal);
+}
+
 /* เลขสถานีบนจอ ให้ตรงกับปุ่มด้านล่าง */
 const DIGITS = {
   1: ['.#.', '##.', '.#.', '.#.', '###'],

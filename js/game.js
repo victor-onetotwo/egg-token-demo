@@ -33,7 +33,8 @@ const G = {
 let ctx = null, canvas = null, rafId = 0, lastTs = 0;
 
 /* ---------- เริ่มเกม ---------- */
-function newGame(shopKey, themeKey, locKey) {
+function newGame(shopKey, themeKey, locKey, modeKey) {
+  G.mode = MODES[modeKey] || MODES.demo;
   G.shop = SHOPS[shopKey];
   G.theme = THEMES[themeKey];
   G.loc = LOCATIONS[locKey];
@@ -66,10 +67,10 @@ function nextDay() {
   if (G.day > DAYS.length) { showEnding(); return; }
   const d = DAYS[G.day - 1];
 
-  G.dayLen = RULES.dayLength;
+  G.dayLen = G.mode.dayLength;
   G.timeLeft = G.dayLen;
   G.elapsed = 0;
-  G.tokens = RULES.tokensPerDay;
+  G.tokens = G.mode.tokens;
   G.tokenHint = null;
   G.customers = []; G.queue = []; G.waiting = []; G.collectors = [];
   G.orderSpotCust = null;
@@ -87,7 +88,7 @@ function nextDay() {
   G.platformIn = G.platformDue;      // เงินเดลิเวอรีของเมื่อวาน ที่โอนเข้าวันนี้
   G.platformDue = 0;
   G.supplyBill = 0;                  // ค่าของที่รับวันนี้ รอจ่ายตอนปิดบัญชี
-  G.rentToday = G.loc.rent;
+  G.rentToday = dailyRent();
   G.wageToday = dailyWage();
   G.settled = false;                 // กดสรุปจ่ายแล้วหรือยัง
 
@@ -119,7 +120,7 @@ function nextDay() {
   G.nightOrder = { a: 0, b: 0 };
 
   G.closing = false;
-  G.graceLeft = RULES.closingGrace;
+  G.graceLeft = G.mode.grace;
   G.tutorial = { on: !!d.tutorial, step: 0 };
   G.hold = false;
   G.hintTile = null;
@@ -144,12 +145,14 @@ function dailyWage() {
   if (G.flags.hired) w += G.flags.trained ? RULES.wageTrained : RULES.wageBase;
   if (G.flags.hired2) w += G.flags.trained ? RULES.wageTrained : RULES.wageBase;
   if (G.flags.cook2) w += G.shop.upgrade.wage;
-  return w;
+  return Math.round(w * G.mode.scale);
 }
+
+function dailyRent() { return Math.round(G.loc.rent * G.mode.scale); }
 
 function buildSpawns(d) {
   const list = [];
-  let heads = Math.round(d.heads * G.loc.flow);
+  let heads = Math.round(d.heads * G.loc.flow * G.mode.headScale);
   const gmin = G.theme.group[0], gmax = G.theme.group[1];
   const from = 0.4, to = G.dayLen - 1.2;
   if (d.tutorial) { list.push({ t: 0.3, size: 1, rider: false }); heads -= 1; }
@@ -761,7 +764,7 @@ function tutorialTick() {
 function beginClosing() {
   if (G.closing) return;
   G.closing = true;
-  G.graceLeft = RULES.closingGrace;
+  G.graceLeft = G.mode.grace;
   SFX.close();
   const goHome = G.queue.slice();
   if (G.orderSpotCust && G.orderSpotCust.state !== 'ordering') goHome.push(G.orderSpotCust);
@@ -771,7 +774,7 @@ function beginClosing() {
   }
   G.queue = [];
   if (G.orderSpotCust && G.orderSpotCust.state !== 'ordering') G.orderSpotCust = null;
-  UI.toast('หมดเวลาขาย · เคลียร์ออเดอร์ที่รับเงินไปแล้วให้จบ ' + RULES.closingGrace + ' วินาที');
+  UI.toast('หมดเวลาขาย · เคลียร์ออเดอร์ที่รับเงินไปแล้วให้จบใน ' + G.mode.grace + ' วินาที');
 }
 
 /* ---------- ปิดร้าน ---------- */
@@ -888,6 +891,8 @@ function render() {
   const pal = G.pal || THEMES.modern.pal;
   ctx.clearRect(0, 0, VIEW, VIEW);
   drawRoom(ctx, pal, G);
+  G.shopItem = G.shop.item;
+  drawDecor(ctx, pal, G);
   drawStationBadges(ctx, pal);
 
   // ของบนชั้นพัก

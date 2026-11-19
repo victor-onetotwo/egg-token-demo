@@ -103,7 +103,7 @@
 
   <div class="sec">
     <h2>3 · หน้าร้านและสถานี</h2>
-    <p>ผังเดียวกับในเกม ตัวเลข 1–4 ตรงกับปุ่มคำสั่งด้านล่างจอ · ③ อยู่ด้านหลังข้างจุดส่งมอบ แยกจาก ② ชัดเจน</p>
+    <p>ผังเดียวกับในเกม ตัวเลข 1–4 ตรงกับปุ่มคำสั่งด้านล่างจอ · ③ อยู่ด้านหลังข้างจุดส่งมอบ แยกจาก ② ชัดเจน · ของตกแต่งเป็นภาพอย่างเดียว ไม่กินช่องเดิน</p>
     <canvas id="room" class="show" width="384" height="384" style="max-width:100%"></canvas>
     <div class="grid g3" style="margin-top:12px">
       <div class="box"><div class="label">① แคชเชียร์</div><div style="font-size:12.5px;line-height:1.6">รับออเดอร์เมื่อลูกค้ามาถึงเคาน์เตอร์ ถือของอยู่จะรับไม่ได้</div></div>
@@ -190,6 +190,7 @@ function drawRoomCI() {
   ctx.scale(2, 2);
   const pal = THEMES[themeKey].pal;
   drawRoom(ctx, pal, { machine: [{ busy: true }] });
+  drawDecor(ctx, pal, { machine: [{ busy: true }], t: 1.2, shopItem: SHOPS.coffee.item });
   drawStationBadges(ctx, pal);
   // ของตัวอย่างบนเคาน์เตอร์และชั้นพัก
   const item = SHOPS.coffee.item;

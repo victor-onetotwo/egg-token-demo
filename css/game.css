@@ -1,6 +1,7 @@
 /* ===========================================================
    Egg Token Demo — หน้าตา
-   ตัวพิกเซลใช้กับหัวข้อและป้ายเท่านั้น
+   จัดให้ทุกหน้าพอดีจอ ไม่ต้องเลื่อนขึ้นลง
+   ตัวพิกเซลใช้กับหัวข้อและป้ายอังกฤษเท่านั้น
    เวลา เงิน แถบรอ และคำสั่ง ใช้ฟอนต์ที่อ่านออกทันที
    =========================================================== */
 
@@ -24,52 +25,56 @@
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
   -webkit-text-size-adjust: 100%;
 }
 
-body { min-height: 100svh; }
-
 .wrap {
-  max-width: 460px;
+  max-width: 560px;
+  height: 100%;
   margin: 0 auto;
-  padding: 10px 12px 20px;
+  padding: 7px 10px calc(8px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  overflow: hidden;
 }
 
 /* ---------- HUD ---------- */
-.hud { display: flex; flex-direction: column; gap: 6px; }
-
-.hud-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.hud-row.end { justify-content: space-between; }
+.hud { display: flex; flex-direction: column; gap: 5px; flex: 0 0 auto; }
+.hud-row { display: flex; flex-wrap: nowrap; gap: 5px; align-items: center; }
+.hud-row .spacer { flex: 1 1 auto; }
 
 .chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.55;
+  white-space: nowrap;
 }
-.chip i { color: var(--sub); font-style: normal; font-size: 11px; }
+.hud-row.small .chip { font-size: 11px; padding: 2px 8px; }
+.chip i { color: var(--sub); font-style: normal; font-size: 10.5px; }
 .chip b { font-variant-numeric: tabular-nums; font-weight: 600; }
 .chip.solo { font-weight: 700; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.chip b.low, #hud-stock.low { color: var(--neg); }
+#hud-stock.low { color: var(--neg); }
 
 .timer {
   position: relative;
-  height: 18px;
+  height: 16px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
+  flex: 0 0 auto;
 }
 .timer-fill {
   position: absolute; inset: 0 auto 0 0;
@@ -83,24 +88,24 @@ body { min-height: 100svh; }
 .timer span {
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  font-size: 11px; font-weight: 700;
+  font-size: 10.5px; font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 /* ---------- จอเล่น ---------- */
 .stage {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  background: #000;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 canvas {
-  width: 100%;
-  height: 100%;
   display: block;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #000;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   touch-action: manipulation;
@@ -110,54 +115,52 @@ canvas {
   position: absolute;
   left: 8px; right: 8px;
   top: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  background: rgba(16,16,16,.82);
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: rgba(16,16,16,.84);
   color: #fff;
 }
+.hidden { display: none !important; }
+
 .hint {
-  min-height: 40px;
+  flex: 0 0 auto;
+  min-height: 36px;
   display: flex;
   align-items: center;
-  padding: 7px 11px;
+  padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
   background: var(--panel);
   color: var(--sub);
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
 }
-.hint.on {
-  border-left-color: #ffb020;
-  color: var(--text);
-  font-weight: 600;
-}
-.hidden { display: none !important; }
+.hint.on { border-left-color: #ffb020; color: var(--text); font-weight: 600; }
 
 /* ---------- ปุ่มสถานี ---------- */
-.stations { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.stations { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; flex: 0 0 auto; }
 .sbtn {
   appearance: none;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
   border-radius: 10px;
-  padding: 8px 4px 7px;
+  padding: 6px 3px 5px;
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   cursor: pointer;
 }
 .sbtn i {
   font-family: var(--pixel);
   font-style: normal;
-  font-size: 9px;
-  width: 18px; height: 18px;
+  font-size: 8px;
+  width: 17px; height: 17px;
   display: grid; place-items: center;
   border-radius: 6px;
   background: var(--accent);
@@ -165,17 +168,15 @@ canvas {
 }
 .sbtn:active { transform: translateY(1px); }
 .sbtn.alert { border-color: #ffb020; box-shadow: 0 0 0 2px rgba(255,176,32,.35); }
-#door-btn { grid-column: span 4; flex-direction: row; justify-content: center; }
-
-.foot { margin: 2px 0 0; font-size: 11px; color: var(--sub); text-align: center; }
+#door-btn { grid-column: span 4; flex-direction: row; justify-content: center; gap: 6px; padding: 5px; }
 
 /* ---------- ปุ่มทั่วไป ---------- */
 .btn {
   appearance: none;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 11px 16px;
+  padding: 9px 14px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -183,106 +184,160 @@ canvas {
   cursor: pointer;
 }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.btn.token { font-size: 13px; padding: 8px 14px; border-color: var(--accent); }
-.btn.icon { padding: 8px 10px; font-size: 15px; }
-.btn.sm { padding: 6px 12px; font-size: 16px; min-width: 40px; }
+.btn.token { font-size: 12px; padding: 5px 11px; border-color: var(--accent); white-space: nowrap; }
+.btn.icon { padding: 5px 8px; font-size: 14px; }
+.btn.sm { padding: 5px 11px; font-size: 15px; min-width: 38px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 
 /* ---------- แผ่นซ้อน ---------- */
 .overlay {
   position: fixed; inset: 0;
   background: rgba(10,10,14,.55);
-  display: grid; place-items: end center;
-  padding: 12px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
   z-index: 20;
-  overflow: auto;
 }
 .sheet {
   width: 100%;
-  max-width: 460px;
+  max-width: 520px;
+  max-height: calc(100% - 16px);
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 18px 16px 16px;
-  margin: auto 0 0;
-  max-height: calc(100svh - 24px);
-  overflow: auto;
+  border-radius: 16px;
+  padding: 14px 13px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
 }
-.sheet-head { margin-bottom: 12px; }
+.sheet-head { flex: 0 0 auto; }
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .kicker {
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
   color: var(--accent);
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
-.kicker .pix {
-  font-family: var(--pixel);
-  font-size: 9px;
-  letter-spacing: .5px;
-}
-.sheet h1 { font-size: 20px; margin: 0 0 6px; line-height: 1.35; }
-.sheet h2 { font-size: 13px; margin: 0 0 8px; color: var(--sub); font-weight: 600; }
-.lead { margin: 0; font-size: 13px; line-height: 1.65; color: var(--sub); }
+.kicker .pix { font-family: var(--pixel); font-size: 8.5px; letter-spacing: .5px; }
+.sheet h1 { font-size: 18px; margin: 0 0 4px; line-height: 1.3; }
+.sheet h2 { font-size: 12px; margin: 0 0 5px; color: var(--sub); font-weight: 600; }
+.lead { margin: 0; font-size: 12px; line-height: 1.5; color: var(--sub); }
 
-.group { margin-bottom: 14px; }
-.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.group { margin: 0; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .cards.col { grid-template-columns: 1fr; }
+.cards.two { grid-template-columns: 1fr 1fr; }
 .card {
   appearance: none;
   text-align: left;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 11px;
+  padding: 7px 8px;
   font-family: var(--sans);
   color: var(--text);
   cursor: pointer;
-  display: flex; flex-direction: column; gap: 3px;
+  display: flex; flex-direction: column; gap: 1px;
 }
-.card.wide { padding: 12px; }
+.card.wide { padding: 10px; }
 .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
-.card-icon { font-size: 18px; }
-.card-title { font-size: 13px; font-weight: 700; }
-.card-cost { font-size: 12px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-.card-sub { font-size: 11px; color: var(--sub); line-height: 1.5; }
-.swatch { display: flex; gap: 2px; margin-bottom: 2px; }
-.swatch i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); }
+.card-icon { font-size: 15px; line-height: 1; }
+.card-title { font-size: 12px; font-weight: 700; }
+.card-cost { font-size: 11.5px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.card-sub { font-size: 10px; color: var(--sub); line-height: 1.35; }
+.swatch { display: flex; gap: 2px; margin-bottom: 1px; }
+.swatch i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); }
 
-.facts { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+.facts { margin: 0; padding-left: 17px; font-size: 12px; line-height: 1.65; }
 .facts b { font-variant-numeric: tabular-nums; }
 
-.rows { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; margin-bottom: 10px; }
-.rows.small { font-size: 12px; }
-.row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+.rows { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 2px 11px; }
+.rows.small { font-size: 11px; }
+.row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 12.5px; border-bottom: 1px solid var(--line); }
 .row:last-child { border-bottom: 0; }
 .row span { color: var(--sub); }
-.row b { font-variant-numeric: tabular-nums; }
-.row.total b { font-size: 15px; }
+.row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row.total b { font-size: 14px; }
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
 
-.note { font-size: 12px; color: var(--sub); line-height: 1.7; margin: 0 0 10px; }
+.note { font-size: 11.5px; color: var(--sub); line-height: 1.55; margin: 0; }
 .note.warn { color: var(--neg); }
 
 .stepper {
   display: flex; align-items: center; justify-content: space-between;
   background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+  border-radius: 11px; padding: 8px 10px;
 }
-.stepper-info { display: flex; flex-direction: column; gap: 2px; }
-.stepper-info b { font-size: 14px; }
-.stepper-info span { font-size: 11px; color: var(--sub); }
-.stepper-ctl { display: flex; align-items: center; gap: 8px; }
-.stepper-ctl span { min-width: 28px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper-info { display: flex; flex-direction: column; gap: 1px; }
+.stepper-info b { font-size: 13px; }
+.stepper-info span { font-size: 10.5px; color: var(--sub); }
+.stepper-ctl { display: flex; align-items: center; gap: 7px; }
+.stepper-ctl span { min-width: 26px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.sheet-foot { margin-top: 14px; display: grid; gap: 8px; }
+.sheet-foot { flex: 0 0 auto; display: grid; gap: 6px; }
 .sheet-foot.two { grid-template-columns: 1fr 1fr; }
 .sheet-foot .btn { width: 100%; }
 
-@media (min-width: 520px) {
-  .wrap { max-width: 480px; padding-top: 16px; }
-  .sheet { margin: auto; }
-  .overlay { place-items: center; }
+/* กล่องสรุปเงินลงทุนหน้าตั้งร้าน */
+.invest-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 8px 11px;
+}
+.invest-bar > div { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 11.5px; }
+.invest-bar span { color: var(--sub); }
+.invest-bar b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.invest-bar .hi b { font-size: 14px; }
+
+/* ปุ่มสลับโหมด */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.seg button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-family: var(--sans);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+}
+.seg button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.seg b { font-size: 12px; }
+.seg span { font-size: 10px; color: var(--sub); line-height: 1.3; }
+
+/* จอเตี้ยมาก บีบหน้าตั้งร้านให้พอดี */
+@media (max-height: 690px) {
+  .setup .lead { display: none; }
+  .seg span { display: none; }
+  .seg button { padding: 7px 9px; }
+  .card { padding: 5px 7px; }
+  .card-icon { display: none; }
+  .sheet h2 { margin-bottom: 3px; }
+  .sheet { gap: 5px; }
+  .invest-bar { padding: 6px 9px; }
+  .invest-bar > div { font-size: 11px; }
+  .rows.small .row { padding: 3px 0; }
+  .card-sub { font-size: 9px; line-height: 1.25; }
+  .sheet h2 { font-size: 11px; }
+  .sheet h1 { font-size: 15px; margin-bottom: 2px; }
+  .kicker { margin-bottom: 3px; }
+}
+
+/* จอเตี้ย บีบให้พอดีขึ้นอีก */
+@media (max-height: 740px) {
+  .sheet h1 { font-size: 16px; }
+  .lead, .note { font-size: 11px; }
+  .card-sub { font-size: 9.5px; }
+  .row { padding: 5px 0; font-size: 12px; }
+  .hint { min-height: 32px; font-size: 11.5px; }
+  .sheet { padding: 11px 11px 10px; gap: 6px; }
 }

@@ -8,13 +8,30 @@ const COLS = 12;
 const ROWS = 13;            // แถว 12 = นอกจอ ใช้เป็นทางเข้า-ออก
 const VIEW = TILE * COLS;   // 192 px
 
+/* ---------- โหมดการเล่น ----------
+   เดโม = รอบสั้น ไว้โชว์ให้จบใน 3 นาที
+   ปกติ = วันละ 2 นาที ลูกค้าเยอะขึ้นตามเวลา ค่าแรงกับค่าเช่าคิดเต็มวัน
+   scale ใช้คูณค่าใช้จ่ายรายวัน ให้สัดส่วนกำไรขาดทุนเท่ากันทั้งสองโหมด   */
+const MODES = {
+  demo: {
+    key: 'demo', name: 'เดโม', time: '15 วินาที/วัน',
+    desc: 'เล่นจบ 7 วันในไม่กี่นาที เหมาะกับการโชว์',
+    dayLength: 15, grace: 6, tokens: 3, headScale: 1, scale: 1
+  },
+  normal: {
+    key: 'normal', name: 'ปกติ', time: '2 นาที/วัน',
+    desc: 'มีเวลาจัดคิวจริง ลูกค้าเยอะขึ้นตามเวลาที่เปิดร้าน',
+    dayLength: 120, grace: 20, tokens: 8, headScale: 6, scale: 6
+  }
+};
+
 /* ---------- ประเภทร้าน ----------
    setup = เงินลงทุนอุปกรณ์หน้าร้านครั้งแรก
    price = ราคาต่อชิ้น · ลูกค้า 1 คนสั่งได้ 1–3 ชิ้นต่อออเดอร์   */
 const SHOPS = {
   coffee: {
     key: 'coffee', name: 'ร้านกาแฟ', icon: '☕',
-    product: 'กาแฟ', price: 95, prep: 1.8, item: 'cup',
+    product: 'กาแฟ', price: 95, prep: 1.5, item: 'cup',
     setup: 36000, setupNote: 'เครื่องชง เครื่องบด ตู้แช่นม',
     s2: 'เครื่องกาแฟ', s3: 'จุดหยิบแก้ว',
     s2hint: 'กดเริ่มชงล่วงหน้าได้ ถ้าเครื่องว่าง',
@@ -27,7 +44,7 @@ const SHOPS = {
   },
   ramen: {
     key: 'ramen', name: 'ร้านราเมง', icon: '🍜',
-    product: 'ราเมง', price: 110, prep: 2.3, item: 'bowl',
+    product: 'ราเมง', price: 110, prep: 1.9, item: 'bowl',
     setup: 42000, setupNote: 'เตา หม้อต้ม ระบบระบายควัน',
     s2: 'ช่องส่งตั๋ว', s3: 'ช่องอาหารออก',
     s2hint: 'ส่งตั๋วเข้าครัวได้เมื่อมีออเดอร์',
@@ -40,7 +57,7 @@ const SHOPS = {
   },
   burger: {
     key: 'burger', name: 'ร้านเบอร์เกอร์', icon: '🍔',
-    product: 'เบอร์เกอร์', price: 105, prep: 2.1, item: 'burger',
+    product: 'เบอร์เกอร์', price: 105, prep: 1.8, item: 'burger',
     setup: 39000, setupNote: 'เตาย่าง ตู้แช่ เครื่องอุ่นขนมปัง',
     s2: 'ช่องส่งตั๋ว', s3: 'ช่องอาหารออก',
     s2hint: 'ส่งตั๋วเข้าครัวได้เมื่อมีออเดอร์',
@@ -81,6 +98,7 @@ const THEMES = {
   modern: {
     key: 'modern', name: 'โมเดิร์น', setup: 18000,
     desc: 'ร้านโทนขาวดำ ตัวละครสีปกติ ลูกค้ามาเดี่ยว สั่งง่าย อดทนสูง',
+    short: 'ขาวดำ · ลูกค้ามาเดี่ยว อดทนสูง',
     group: [1, 1], patience: 1.25,
     pal: {
       floor: '#e9e9e9', floorAlt: '#dedede', rug: '#d2d2d2',
@@ -88,7 +106,7 @@ const THEMES = {
       counter: '#f7f7f7', counterEdge: '#8d8d8d',
       machine: '#4b4b4b', machineLit: '#9f9f9f',
       accent: '#141414', accent2: '#6b6b6b',
-      glass: '#cfd6d8'
+      glass: '#cfd6d8', plant: '#4a7a52', pot: '#8a6a52', wood: '#b08968', neon: '#f0c13b'
     },
     ui: { bg: '#f3f3f3', panel: '#ffffff', text: '#161616', sub: '#6a6a6a', accent: '#161616', line: '#d8d8d8' },
     people: [
@@ -101,6 +119,7 @@ const THEMES = {
   sweet: {
     key: 'sweet', name: 'หวาน', setup: 20000,
     desc: 'ร้านชมพูอ่อน ตัวละครพาสเทล ลูกค้ามักมาคู่ รอได้ไม่นาน',
+    short: 'ชมพูพาสเทล · มาคู่ รอไม่นาน',
     group: [2, 2], patience: 0.85,
     pal: {
       floor: '#ffeef5', floorAlt: '#ffe2ee', rug: '#ffd6e6',
@@ -108,7 +127,7 @@ const THEMES = {
       counter: '#fff7fb', counterEdge: '#e79ab8',
       machine: '#d98ab0', machineLit: '#ffd3e6',
       accent: '#ff6fa5', accent2: '#c77fa6',
-      glass: '#ffe7f1'
+      glass: '#ffe7f1', plant: '#7fbf87', pot: '#e0a6bd', wood: '#e8c7a8', neon: '#ff9ec4'
     },
     ui: { bg: '#fff2f7', panel: '#ffffff', text: '#5b3246', sub: '#a4778a', accent: '#ff6fa5', line: '#ffd8e7' },
     people: [
@@ -121,6 +140,7 @@ const THEMES = {
   cyber: {
     key: 'cyber', name: 'ไซเบอร์พังก์', setup: 22000,
     desc: 'ร้านและตัวละครสีฉูดฉาด วัยรุ่นมากันกลุ่มละ 4–6 คน',
+    short: 'นีออน · มากลุ่มละ 4–6 คน',
     group: [4, 6], patience: 1.0,
     pal: {
       floor: '#1d1336', floorAlt: '#251845', rug: '#2e1d58',
@@ -128,7 +148,7 @@ const THEMES = {
       counter: '#2b1b52', counterEdge: '#00e5ff',
       machine: '#3a2070', machineLit: '#ff2fd0',
       accent: '#00e5ff', accent2: '#ff2fd0',
-      glass: '#163a4d'
+      glass: '#163a4d', plant: '#2fd9a0', pot: '#3a2a6a', wood: '#4a2f7a', neon: '#ffe14d'
     },
     ui: { bg: '#140e28', panel: '#1e1540', text: '#e8f6ff', sub: '#9b8ccc', accent: '#00e5ff', line: '#33265e' },
     people: [
@@ -148,7 +168,7 @@ const RIDER_PAL = { skin: '#e0b183', hair: '#1c1c1c', shirt: '#17a34a', pants: '
 /* ---------- ค่าเกม ---------- */
 const RULES = {
   startCash: 100000,      // เงินทุนตั้งต้น ก่อนหักค่าลงทุนตอนตั้งร้าน
-  dayLength: 15,          // วินาทีต่อวัน เฉพาะช่วงเปิดร้าน
+  dayLength: 15,          // ค่าสำรอง ถ้าไม่ได้เลือกโหมด
   wageBase: 200,          // ค่าแรงต่อวัน พนักงานยังไม่เทรน
   wageTrained: 280,       // หลังเทรน
   trainCost: 1200,        // ค่าเทรน จ่ายครั้งเดียว
@@ -156,19 +176,17 @@ const RULES = {
   platformCut: 0.15,      // ค่าคอมแพลตฟอร์มเดลิเวอรี
   platformDelay: 1,       // เงินเดลิเวอรีเข้าช้ากว่า 1 วัน
   orderQtyWeights: [35, 30, 20, 15],  // โอกาสที่ลูกค้าจะสั่ง 1 / 2 / 3 / 4 ชิ้น
-  closingGrace: 6,        // วินาทีหลังปิดร้าน ให้เคลียร์ออเดอร์ที่ค้าง
-  tokensPerDay: 3,
-  queuePatience: 8,       // วินาที ก่อนลูกค้าเดินออกจากคิวสั่ง (คูณด้วยค่าธีม)
-  waitPatience: 10,       // วินาที ก่อนลูกค้าเดินออกจากจุดรอรับ
+  queuePatience: 13,      // วินาที ก่อนลูกค้าเดินออกจากคิวสั่ง (คูณด้วยค่าธีม)
+  waitPatience: 16,       // วินาที ก่อนลูกค้าเดินออกจากจุดรอรับ
   chatRefill: 0.55,       // คุยกับลูกค้า 1 ครั้ง เติมความอดทนเท่าไร
-  takeOrderTime: 0.5,
-  pickTime: 0.3,
-  placeTime: 0.25,
-  collectTime: 0.3,
-  payTime: 0.5,
+  takeOrderTime: 0.4,
+  pickTime: 0.2,
+  placeTime: 0.2,
+  collectTime: 0.25,
+  payTime: 0.4,
   trayMax: 3,
   counterMax: 3,
-  walkSpeed: 70,          // px ต่อวินาที
+  walkSpeed: 95,          // px ต่อวินาที
   ratingMinReviews: 6
 };
 
