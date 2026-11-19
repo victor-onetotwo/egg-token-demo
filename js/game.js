@@ -57,6 +57,7 @@ function newGame(shopKey, themeKey, locKey, modeKey) {
   G.history = [];
   G.finalChoice = null;
   G.platformDue = 0;        // ยอดเดลิเวอรีที่รอโอนเข้าพรุ่งนี้ (สุทธิแล้ว)
+  G.branch = null;          // สาขา 2 ยังไม่เปิด
   G.day = 0;
   applyTheme(G.theme);
   nextDay();
@@ -802,7 +803,8 @@ function closeStore() {
     lateNote = 'ของที่ยังไม่ได้ไปรับ ซัพพลายเออร์ฝากไว้ตอนปิดร้าน ค่าของยังต้องจ่ายเท่าเดิม';
   }
 
-  // เงินเดลิเวอรีของเมื่อวาน โอนเข้าวันนี้ และตั้งยอดรอโอนของวันนี้
+  // ผลประกอบการสาขา 2 และเงินเดลิเวอรีของเมื่อวาน
+  const bday = runBranchDay();
   G.cash += G.platformIn;
   G.platformDue = Math.round(G.platformToday * (1 - RULES.platformCut));
 
@@ -818,7 +820,8 @@ function closeStore() {
     wage: G.wageToday,
     rent: G.rentToday,
     supply: G.supplyBill,
-    expense: G.wageToday + G.rentToday + G.supplyBill,
+    branch: bday ? Object.assign({ name: G.branch.name, staff: G.branch.staff, balance: G.branch.balance, daysOpen: G.branch.daysOpen }, bday) : null,
+    expense: G.wageToday + G.rentToday + G.supplyBill + (bday ? bday.cost + bday.inst : 0),
     served: G.servedToday,
     lateServed: G.lateServed,
     left: G.leftToday,
@@ -855,6 +858,106 @@ function settlePayments() {
   G.lastResult.settled = true;
   SFX.coin();
   return G.lastResult;
+}
+
+/* ===========================================================
+   สาขา 2 และเงินกู้
+   =========================================================== */
+
+/* มูลค่าสินทรัพย์ในร้าน ใช้เป็นหลักประกัน */
+function assetValue() {
+  const dep = Math.max(0.5, 1 - BRANCH.depreciation * Math.max(0, G.day - 1));
+  let v = G.invest.total * dep;
+  v += G.stock.a * G.shop.ing[0].cost + G.stock.b * G.shop.ing[1].cost;
+  if (G.flags.machine2 || G.flags.cook2) v += G.shop.upgrade.cost * 0.8;
+  if (G.branch) v += G.branch.cost * Math.max(0.5, 1 - BRANCH.depreciation * G.branch.daysOpen);
+  return Math.round(v);
+}
+
+/* ใบเสนอราคาเปิดสาขาที่ทำเลหนึ่ง ๆ */
+function branchQuote(locKey) {
+  const loc = LOCATIONS[locKey];
+  const cost = Math.round(G.shop.setup * BRANCH.equipDiscount + loc.deposit + G.theme.setup * BRANCH.decorDiscount);
+  const down = Math.round(cost * BRANCH.downRate);
+  const loan = cost - down;
+  const term = G.mode.key === 'demo' ? BRANCH.termDemo : BRANCH.termNormal;
+  const total = Math.round(loan * (1 + BRANCH.interest));
+  return { locKey, cost, down, loan, total, term, installment: Math.ceil(total / term) };
+}
+
+/* เกณฑ์ที่ธนาคารดู ส่งกลับเป็นรายการให้ UI ติ๊กถูกผิด */
+function branchChecks(q) {
+  const assets = assetValue();
+  const collateral = assets + G.cash;
+  const need = Math.round(q.loan * BRANCH.collateralRate);
+  return [
+    { ok: G.day >= BRANCH.minDay,
+      label: 'เปิดร้านเดิมมาแล้วอย่างน้อย ' + BRANCH.minDay + ' วัน',
+      got: 'ตอนนี้วันที่ ' + G.day },
+    { ok: collateral >= need,
+      label: 'สินทรัพย์ + เงินสด ไม่น้อยกว่า ' + Math.round(BRANCH.collateralRate * 100) + '% ของวงเงินกู้',
+      got: 'มี ' + collateral.toLocaleString() + '฿ · ต้องมี ' + need.toLocaleString() + '฿' },
+    { ok: G.cash >= q.down,
+      label: 'วางเงินดาวน์เอง ' + Math.round(BRANCH.downRate * 100) + '%',
+      got: 'ดาวน์ ' + q.down.toLocaleString() + '฿ · เงินสดมี ' + Math.round(G.cash).toLocaleString() + '฿' },
+    { ok: G.cash - q.down >= BRANCH.minCashAfter,
+      label: 'จ่ายดาวน์แล้วต้องเหลือเงินหมุนเวียน ' + BRANCH.minCashAfter.toLocaleString() + '฿',
+      got: 'จะเหลือ ' + Math.round(G.cash - q.down).toLocaleString() + '฿' }
+  ];
+}
+
+function branchEligible(q) { return branchChecks(q).every(c => c.ok); }
+
+function canOfferBranch() {
+  return !G.branch && G.day >= BRANCH.minDay && G.day < DAYS.length;
+}
+
+function openBranch(locKey, staff) {
+  const q = branchQuote(locKey);
+  if (!branchEligible(q)) return false;
+  G.cash -= q.down;
+  G.branch = {
+    loc: locKey,
+    name: LOCATIONS[locKey].name,
+    cost: q.cost, down: q.down, loan: q.loan,
+    balance: q.total, installment: q.installment, term: q.term,
+    staff: staff, daysOpen: 0, openedDay: G.day,
+    totalRevenue: 0, totalProfit: 0, today: null
+  };
+  SFX.coin();
+  return true;
+}
+
+function branchWage() { return Math.round(G.branch.staff * RULES.wageTrained * G.mode.scale); }
+function branchRent() { return Math.round(LOCATIONS[G.branch.loc].rent * G.mode.scale); }
+
+/* ผลประกอบการของสาขาในหนึ่งวัน คิดตอนปิดร้าน */
+function runBranchDay() {
+  const b = G.branch;
+  if (!b) return null;
+  b.daysOpen++;
+  const d = DAYS[G.day - 1];
+  const heads = d.heads * LOCATIONS[b.loc].flow * G.mode.headScale;
+  const ramp = BRANCH.ramp[Math.min(b.daysOpen - 1, BRANCH.ramp.length - 1)];
+  const sf = BRANCH.staffFactor[Math.min(b.staff, BRANCH.staffFactor.length - 1)];
+  const revenue = Math.round(heads * G.shop.price * BRANCH.avgQty * ramp * sf);
+  const ing = Math.round(revenue * BRANCH.ingredientRate);
+  const wage = branchWage();
+  const rent = branchRent();
+  const inst = Math.min(b.installment, b.balance);
+  b.balance = Math.max(0, b.balance - inst);
+  b.totalRevenue += revenue;
+  b.totalProfit += revenue - ing - wage - rent - inst;
+  b.today = { revenue, ing, wage, rent, inst, cost: ing + wage + rent };
+  G.cash += revenue;                 // เงินสดจากสาขาเข้าตอนปิดร้าน
+  return b.today;
+}
+
+function hireBranchStaff() {
+  if (!G.branch || G.branch.staff >= BRANCH.staffMax) return false;
+  G.branch.staff++;
+  SFX.coin();
+  return true;
 }
 
 /* ---------- การตัดสินใจตอนปิดร้าน ---------- */

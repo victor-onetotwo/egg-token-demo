@@ -153,6 +153,7 @@ const UI = (function () {
         <li>ค่าเช่า ${dailyRent().toLocaleString()}฿ และค่าแรง หักตอนปิดบัญชีสิ้นวัน</li>
         <li>${staffLine}</li>
         ${deliv}${rider}${chat}
+        ${G.branch ? `<li>สาขา 2 ที่${G.branch.name} · พนักงาน ${G.branch.staff} คน · ผ่อนวันละ ${G.branch.installment.toLocaleString()}฿ · หนี้เหลือ ${Math.round(G.branch.balance).toLocaleString()}฿</li>` : ''}
         <li>E.Token วันนี้ ${G.mode.tokens} ครั้ง</li>
       </ul>
       <div class="sheet-foot"><button class="btn primary" id="btn-open">เปิดร้าน · ${G.mode.time}</button></div>
@@ -208,7 +209,7 @@ const UI = (function () {
 
   // หมวดที่ 1 · รายได้ — ยอดขาย เทียบกับ เงินที่เข้ามาจริง
   function showSummary(r) {
-    const cashIn = r.cashIn + r.platformIn;
+    const cashIn = r.cashIn + r.platformIn + (r.branch ? r.branch.revenue : 0);
     const gap = cashIn - r.sales;
     openSheet(`
       <div class="sheet-head">
@@ -221,6 +222,7 @@ const UI = (function () {
         <div class="row"><span>คืนเงินลูกค้าที่ไม่ได้รับของ</span><b class="${r.refund ? 'neg' : ''}">${r.refund ? '-' + baht(r.refund) : '0฿'}</b></div>
         ${r.platformToday ? `<div class="row"><span>ยอดเดลิเวอรี ยังไม่เข้าเงินสด</span><b class="neg">-${baht(r.platformToday)}</b></div>` : ''}
         ${r.platformIn ? `<div class="row"><span>เงินเดลิเวอรีเมื่อวาน โอนเข้าวันนี้</span><b class="pos">+${baht(r.platformIn)}</b></div>` : ''}
+        ${r.branch ? `<div class="row"><span>ยอดขายสาขา 2 · ${r.branch.name}</span><b class="pos">+${baht(r.branch.revenue)}</b></div>` : ''}
         <div class="row total"><span>เงินสดเข้าวันนี้</span><b>${baht(cashIn)}</b></div>
       </div>
       <p class="note ${gap < 0 ? 'warn' : ''}">
@@ -238,7 +240,7 @@ const UI = (function () {
 
   // หมวดที่ 2 · ยอดเงินสด — ยกมา + เข้าวันนี้ − ค่าใช้จ่าย โดยต้องกดสรุปจ่ายเอง
   function showCashStep(r) {
-    const cashIn = r.cashIn + r.platformIn;
+    const cashIn = r.cashIn + r.platformIn + (r.branch ? r.branch.revenue : 0);
     const after = r.openingCash + cashIn - r.expense;
     const done = !!G.settled;
     openSheet(`
@@ -253,6 +255,8 @@ const UI = (function () {
         <div class="row"><span>ค่าแรง${G.flags.hired ? ' · ' + (G.flags.hired2 ? 2 : 1) + ' คน' : ''}</span><b class="neg">-${baht(r.wage)}</b></div>
         <div class="row"><span>ค่าเช่า · ${G.loc.name}</span><b class="neg">-${baht(r.rent)}</b></div>
         <div class="row"><span>ค่าของที่รับวันนี้</span><b class="neg">-${baht(r.supply)}</b></div>
+        ${r.branch ? `<div class="row"><span>ค่าใช้จ่ายสาขา 2 · ของ คน ค่าเช่า</span><b class="neg">-${baht(r.branch.cost)}</b></div>` : ''}
+        ${r.branch && r.branch.inst ? `<div class="row"><span>ค่างวดเงินกู้สาขา</span><b class="neg">-${baht(r.branch.inst)}</b></div>` : ''}
         <div class="row total"><span>${done ? 'เงินสดคงเหลือ' : 'เงินสดคงเหลือ (หลังจ่าย)'}</span><b class="${after < 0 ? 'neg' : ''}">${baht(after)}</b></div>
       </div>
       ${r.lateNote ? `<p class="note warn">${r.lateNote}</p>` : ''}
@@ -276,7 +280,7 @@ const UI = (function () {
   // หมวดที่ 3 · รายงานการปิดบัญชีประจำวัน
   function showClosingReport(r) {
     const s = G.shop;
-    const cashIn = r.cashIn + r.platformIn;
+    const cashIn = r.cashIn + r.platformIn + (r.branch ? r.branch.revenue : 0);
     const profit = cashIn - r.expense;
     const gap = cashIn - r.sales;
     const last = r.day >= DAYS.length;
@@ -299,15 +303,24 @@ const UI = (function () {
         ${DAYS[r.day - 1].rating ? `<div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>` : ''}
         <div class="row"><span>สต็อกคงเหลือ</span><b>${s.ing[0].name} ${r.stock.a} · ${s.ing[1].name} ${r.stock.b}</b></div>
       </div>
+      ${r.branch ? `<div class="rows">
+        <div class="row"><span>สาขา 2 · ${r.branch.name} · เปิดมา ${r.branch.daysOpen} วัน</span><b class="${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? 'pos' : 'neg'}">${r.branch.revenue - r.branch.cost - r.branch.inst >= 0 ? '+' : ''}${baht(r.branch.revenue - r.branch.cost - r.branch.inst)}</b></div>
+        <div class="row"><span>พนักงานสาขา ${r.branch.staff} คน · หนี้คงเหลือ</span><b>${baht(r.branch.balance)}</b></div>
+      </div>` : ''}
       <p class="note">${r.left
         ? 'ลูกค้าที่จ่ายแล้วแต่ไม่ได้ของ ต้องคืนเงิน ยอดขายไม่ถูกหักก็จริง แต่เงินสดหายไปแล้ว และเรตติ้งก็เสียด้วย'
         : 'วันนี้ไม่มีใครเดินออก เงินสดกับยอดขายเลยห่างกันน้อย'}</p>
-      <div class="sheet-foot"><button class="btn primary" id="btn-order">${last ? 'ดูผลรวม 7 วัน' : 'สั่งของสำหรับพรุ่งนี้'}</button></div>
+      <div class="sheet-foot">
+        ${r.branch && r.branch.staff < BRANCH.staffMax ? `<button class="btn" id="btn-bstaff">เพิ่มพนักงานสาขาเป็น ${r.branch.staff + 1} คน · +${Math.round(RULES.wageTrained * G.mode.scale).toLocaleString()}฿/วัน</button>` : ''}
+        <button class="btn primary" id="btn-order">${last ? 'ดูผลรวม 7 วัน' : 'สั่งของสำหรับพรุ่งนี้'}</button>
+      </div>
     `, 'report');
     $('btn-order').addEventListener('click', () => {
       if (last) { closeSheet(); showDecision('final'); }
       else showOrderPanel();
     });
+    const bs = $('btn-bstaff');
+    if (bs) bs.addEventListener('click', () => { hireBranchStaff(); showClosingReport(r); });
   }
 
   /* ---------- สั่งวัตถุดิบ ---------- */
@@ -361,7 +374,9 @@ const UI = (function () {
       G.tokenHint = null;
       const d = DAYS[G.day - 1];
       const key = resolveDecision(d.decision);
-      if (key) showDecision(key); else nextDay();
+      if (key) showDecision(key);
+      else if (canOfferBranch()) showBranchOffer();
+      else nextDay();
     });
   }
 
@@ -435,8 +450,77 @@ const UI = (function () {
     $('btn-no').addEventListener('click', () => { applyDecision(key, 'no'); SFX.click(); after(key); });
     function after(k) {
       closeSheet();
-      if (k === 'final') window.showEnding(); else nextDay();
+      if (k === 'final') window.showEnding();
+      else if (canOfferBranch()) showBranchOffer();
+      else nextDay();
     }
+  }
+
+  /* ---------- กู้เงินเปิดสาขา 2 ---------- */
+  let branchSel = { loc: null, staff: 1 };
+
+  function showBranchOffer() {
+    if (!branchSel.loc || branchSel.loc === sel.loc) {
+      branchSel.loc = Object.keys(LOCATIONS).find(k => k !== sel.loc) || sel.loc;
+    }
+    const q = branchQuote(branchSel.loc);
+    const checks = branchChecks(q);
+    const ok = checks.every(c => c.ok);
+    const locCards = Object.values(LOCATIONS).map(l => {
+      const lq = branchQuote(l.key);
+      return `<button class="card" data-bloc="${l.key}">
+        <span class="card-title">${l.name}</span>
+        <span class="card-cost">${lq.cost.toLocaleString()}฿</span>
+        <span class="card-sub">ผ่อน ${lq.installment.toLocaleString()}฿/วัน<br>ค่าเช่า ${Math.round(l.rent * G.mode.scale).toLocaleString()}฿/วัน</span>
+      </button>`;
+    }).join('');
+
+    openSheet(`
+      <div class="sheet-head">
+        <div class="kicker"><span class="pix">DAY ${G.day}</span> · ขยายกิจการ</div>
+        <h1>กู้เงินเปิดสาขา 2</h1>
+        <p class="lead">สาขาใหม่ใช้แบรนด์กับเมนูเดิม เลือกแค่ทำเล · ธนาคารดูหลักประกันกับเงินดาวน์ก่อนอนุมัติ</p>
+      </div>
+      <div class="group"><h2>ทำเลสาขาใหม่</h2><div class="cards">${locCards}</div></div>
+      <div class="checks">
+        ${checks.map(c => `<div class="chk ${c.ok ? 'yes' : 'no'}"><i>${c.ok ? '✓' : '✕'}</i><span>${c.label}<em>${c.got}</em></span></div>`).join('')}
+      </div>
+      <div class="group"><h2>พนักงานประจำสาขา</h2>
+        <div class="seg" id="bstaff-seg">
+          <button data-bstaff="1" class="${branchSel.staff === 1 ? 'on' : ''}"><b>1 คน</b><span>ทำได้ราว 70% ของกำลัง</span></button>
+          <button data-bstaff="2" class="${branchSel.staff === 2 ? 'on' : ''}"><b>2 คน</b><span>เต็มกำลัง แต่ค่าแรงเพิ่ม</span></button>
+        </div>
+      </div>
+      <div class="rows">
+        <div class="row"><span>ค่าเปิดสาขา</span><b>${q.cost.toLocaleString()}฿</b></div>
+        <div class="row"><span>เงินดาวน์ที่ต้องจ่ายวันนี้</span><b class="neg">-${q.down.toLocaleString()}฿</b></div>
+        <div class="row"><span>วงเงินกู้ · ดอกเบี้ยรวม ${Math.round(BRANCH.interest * 100)}%</span><b>${q.loan.toLocaleString()}฿</b></div>
+        <div class="row total"><span>ผ่อน ${q.term} งวด วันละ</span><b>${q.installment.toLocaleString()}฿</b></div>
+      </div>
+      <p class="note">${ok
+        ? 'ผ่านเกณฑ์ธนาคาร · สาขาใหม่จะยังไม่เต็มกำลังในวันแรก แล้วค่อย ๆ ขึ้นภายใน 3–4 วัน'
+        : 'ยังไม่ผ่านเกณฑ์ ทำกำไรอีกวันแล้วค่อยกลับมาดูใหม่ ข้อเสนอนี้จะขึ้นให้อีกทุกคืน'}</p>
+      <div class="sheet-foot two">
+        <button class="btn" id="btn-bno">ยังไม่เปิด</button>
+        <button class="btn primary" id="btn-byes" ${ok ? '' : 'disabled'}>กู้และเปิดสาขา</button>
+      </div>
+    `, 'branch');
+
+    el.sheet.querySelectorAll('[data-bloc]').forEach(b => {
+      b.classList.toggle('on', b.dataset.bloc === branchSel.loc);
+      b.addEventListener('click', () => { branchSel.loc = b.dataset.bloc; SFX.click(); showBranchOffer(); });
+    });
+    el.sheet.querySelectorAll('[data-bstaff]').forEach(b => {
+      b.addEventListener('click', () => { branchSel.staff = Number(b.dataset.bstaff); SFX.click(); showBranchOffer(); });
+    });
+    $('btn-bno').addEventListener('click', () => { SFX.click(); closeSheet(); nextDay(); });
+    $('btn-byes').addEventListener('click', () => {
+      if (openBranch(branchSel.loc, branchSel.staff)) {
+        closeSheet();
+        toast('เปิดสาขา 2 ที่' + LOCATIONS[branchSel.loc].name + ' แล้ว · เริ่มผ่อนตั้งแต่พรุ่งนี้');
+        nextDay();
+      }
+    });
   }
 
   /* ---------- จบเดโม ---------- */
@@ -464,6 +548,7 @@ const UI = (function () {
         <div class="row"><span>เงินสดคงเหลือ</span><b>${Math.round(G.cash).toLocaleString()}฿</b></div>
         <div class="row"><span>เสิร์ฟได้ / เดินออก</span><b>${served} / <span class="${left ? 'neg' : ''}">${left}</span></b></div>
         <div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>
+        ${G.branch ? `<div class="row"><span>สาขา 2 · ${G.branch.name}</span><b>ขาย ${Math.round(G.branch.totalRevenue).toLocaleString()}฿ · หนี้เหลือ ${Math.round(G.branch.balance).toLocaleString()}฿</b></div>` : ''}
       </div>
       <div class="rows small">${rows}</div>
       <p class="note">เงินสดบอกว่าร้านอยู่ได้ไหม เรตติ้งบอกว่าคนอยากกลับมาไหม · ตรงไหนที่อยากให้มีคน เครื่อง
