@@ -38,7 +38,16 @@ function newGame(shopKey, themeKey, locKey) {
   G.theme = THEMES[themeKey];
   G.loc = LOCATIONS[locKey];
   G.pal = G.theme.pal;
-  G.cash = RULES.startCash;
+
+  // เงินลงทุนตอนตั้งร้าน หักจากเงินทุนตั้งต้นทันที
+  G.invest = {
+    shop: G.shop.setup,
+    deposit: G.loc.deposit,
+    theme: G.theme.setup,
+    total: G.shop.setup + G.loc.deposit + G.theme.setup
+  };
+  G.cash = RULES.startCash - G.invest.total;
+
   G.stock = { a: G.shop.ing[0].start, b: G.shop.ing[1].start };
   G.flags = { hired: false, trained: false, hired2: false, delivery: false, machine2: false, cook2: false };
   G.nightOrder = { a: 0, b: 0 };
@@ -46,6 +55,7 @@ function newGame(shopKey, themeKey, locKey) {
   G.reviews = { good: 0, bad: 0 };
   G.history = [];
   G.finalChoice = null;
+  G.platformDue = 0;        // ยอดเดลิเวอรีที่รอโอนเข้าพรุ่งนี้ (สุทธิแล้ว)
   G.day = 0;
   applyTheme(G.theme);
   nextDay();
@@ -64,9 +74,22 @@ function nextDay() {
   G.customers = []; G.queue = []; G.waiting = []; G.collectors = [];
   G.orderSpotCust = null;
   G.tray = []; G.counterItems = []; G.pops = [];
-  G.ordersTaken = 0; G.itemsStarted = 0;
-  G.todaySales = 0; G.servedToday = 0; G.leftToday = 0; G.supplyToday = 0;
+  G.ordersTaken = 0; G.itemsStarted = 0; G.unitsUsed = 0;
+  G.orderQueue = [];
+  G.servedToday = 0; G.leftToday = 0;
+
+  // บัญชีของวันนี้
+  G.openingCash = G.cash;            // เงินสดยกมาจากเมื่อวาน
+  G.todaySales = 0;                  // ยอดขายที่บันทึกหน้าร้าน (รวมเดลิเวอรี)
+  G.cashInToday = 0;                 // เงินสดที่รับจริงวันนี้ หักคืนเงินแล้ว
+  G.refundToday = 0;                 // คืนเงินลูกค้าที่จ่ายแล้วไม่ได้ของ
+  G.platformToday = 0;               // ยอดเดลิเวอรีวันนี้ ยังไม่เข้าเงินสด
+  G.platformIn = G.platformDue;      // เงินเดลิเวอรีของเมื่อวาน ที่โอนเข้าวันนี้
+  G.platformDue = 0;
+  G.supplyBill = 0;                  // ค่าของที่รับวันนี้ รอจ่ายตอนปิดบัญชี
+  G.rentToday = G.loc.rent;
   G.wageToday = dailyWage();
+  G.settled = false;                 // กดสรุปจ่ายแล้วหรือยัง
 
   const slots = 1 + (G.flags.machine2 ? 1 : 0);
   G.machine = [];
@@ -86,14 +109,17 @@ function nextDay() {
     at: G.dayLen * 0.45,
     arrived: false, taken: false, cost: cost, qty: { a: q.a, b: q.b }
   };
-  // ถ้าวันนี้ไม่มีคิวของมาส่ง ให้ของเข้าสต็อกตั้งแต่เปิดร้าน
+  // ถ้าวันนี้ไม่มีคิวของมาส่งระหว่างวัน ให้ของเข้าสต็อกตั้งแต่เปิดร้าน
+  // ค่าของเป็นบิลเครดิต ไปจ่ายรวมตอนปิดบัญชีสิ้นวัน
   if ((q.a + q.b) > 0 && !d.delivery) {
     G.stock.a += q.a; G.stock.b += q.b;
-    G.cash -= cost; G.supplyToday += cost;
+    G.supplyBill += cost;
     G.delivery.taken = true;
   }
   G.nightOrder = { a: 0, b: 0 };
 
+  G.closing = false;
+  G.graceLeft = RULES.closingGrace;
   G.tutorial = { on: !!d.tutorial, step: 0 };
   G.hold = false;
   G.hintTile = null;
@@ -194,8 +220,13 @@ function startWatchdog() {
 function update(dt) {
   const clockRuns = !G.hold;
   if (clockRuns) {
-    G.elapsed += dt;
-    G.timeLeft = Math.max(0, G.timeLeft - dt);
+    if (!G.closing) {
+      G.elapsed += dt;
+      G.timeLeft = Math.max(0, G.timeLeft - dt);
+      if (G.timeLeft <= 0) beginClosing();
+    } else {
+      G.graceLeft -= dt;
+    }
   }
 
   // ลูกค้าเข้าร้าน
@@ -218,7 +249,7 @@ function update(dt) {
       if (m.t <= 0) m.done = true;
     }
     if (m.done && G.tray.length < RULES.trayMax) {
-      G.tray.push(G.shop.item);
+      G.tray.push(m.qty || 1);
       m.busy = false; m.done = false;
       SFX.ready();
     }
@@ -239,7 +270,10 @@ function update(dt) {
   updatePops(dt);
   if (G.tutorial.on) tutorialTick();
 
-  if (clockRuns && G.timeLeft <= 0) closeStore();
+  if (clockRuns && G.closing) {
+    const pending = G.customers.some(c => c.paid > 0);
+    if (G.graceLeft <= 0 || !pending) closeStore();
+  }
   UI.syncHud();
 }
 
@@ -258,6 +292,7 @@ function spawnGroup(g) {
   for (let i = 0; i < g.size; i++) {
     const pal = g.rider ? RIDER_PAL : G.theme.people[Math.floor(Math.random() * G.theme.people.length)];
     const c = new Customer(pal, g.rider);
+    c.qty = rollOrderQty();
     c.delay = i * 0.28;
     c.x = ENTRY_X * TILE + TILE / 2;
     c.y = (12 + i * 0.45) * TILE + TILE / 2;
@@ -265,6 +300,18 @@ function spawnGroup(g) {
     joinQueue(c);
   }
   if (g.rider) { SFX.bike(); UI.toast('ออเดอร์มาแล้ว · ไรเดอร์เข้าคิว'); }
+}
+
+/* ลูกค้า 1 คนสั่งกี่ชิ้น ตามน้ำหนักใน RULES.orderQtyWeights */
+function rollOrderQty() {
+  const w = RULES.orderQtyWeights;
+  const total = w.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < w.length; i++) {
+    r -= w[i];
+    if (r <= 0) return i + 1;
+  }
+  return 1;
 }
 
 function joinQueue(c) {
@@ -393,6 +440,7 @@ function walkOut(c) {
     const i = G.waiting.indexOf(c);
     if (i >= 0) { G.waiting.splice(i, 1); reflowWait(); }
   }
+  refundCustomer(c);
   countLeave(c);
   SFX.angry();
 }
@@ -409,19 +457,23 @@ function removeCustomer(c, i) {
 }
 
 /* ---------- การทำงานที่สถานี ---------- */
-function canPromise() {
+function canPromise(qty) {
+  const need = qty || 1;
   const inFlight = cookingCount() + G.tray.length + G.counterItems.length;
   const owed = Math.max(0, G.ordersTaken - G.servedToday);
   if (inFlight > owed) return true;                 // ของที่ทำไว้แล้วพอรับออเดอร์ใหม่
-  return G.stock.a > 0 && G.stock.b > 0;
+  return G.stock.a >= need && G.stock.b >= need;
 }
 
 function cookingCount() { let n = 0; for (const m of G.machine) if (m.busy) n++; return n; }
 
 function demand() { return G.ordersTaken - G.itemsStarted; }
 
+function nextQty() { return G.orderQueue.length ? G.orderQueue[0] : 1; }
+
 function canStartMake() {
-  if (G.stock.a <= 0 || G.stock.b <= 0) return false;
+  const need = nextQty();
+  if (G.stock.a < need || G.stock.b < need) return false;
   const free = G.machine.some(m => !m.busy);
   if (!free) return false;
   if (demand() > 0) return true;
@@ -465,7 +517,7 @@ function tryStart(w) {
     const c = G.orderSpotCust;
     if (!c || c.state !== 'order') return;
     if (w.hold) { no('ถือของอยู่ รับออเดอร์ไม่ได้'); return; }
-    if (!canPromise()) {
+    if (!canPromise(c.qty)) {
       c.say('angry', 1.4);
       pop(c.x, c.y - 26, 'ของหมด', '#e2544a');
       G.orderSpotCust = null;
@@ -519,21 +571,18 @@ function finishAction(w) {
     const c = G.orderSpotCust;
     if (!c) return;
     G.orderSpotCust = null;
-    G.ordersTaken++;
-    G.cash += G.shop.price;
-    G.todaySales += G.shop.price;
-    c.state = 'toWait';
-    c.say('coin', 1.0);
-    G.waiting.push(c);
-    c.goTo(WAIT_SLOTS[Math.min(G.waiting.length - 1, WAIT_SLOTS.length - 1)]);
-    pop(w.x, w.y - 22, '+' + G.shop.price, '#ffd34d');
-    SFX.coin();
+    takeOrderFrom(c, w);
   } else if (kind === 'make') {
     const m = G.machine.find(m => !m.busy);
     if (!m) return;
-    G.stock.a--; G.stock.b--;
+    const qty = G.orderQueue.length ? G.orderQueue[0] : 1;
+    if (G.stock.a < qty || G.stock.b < qty) return;
+    if (G.orderQueue.length) G.orderQueue.shift();
+    G.stock.a -= qty; G.stock.b -= qty;
+    G.unitsUsed += qty;
     G.itemsStarted++;
     m.busy = true;
+    m.qty = qty;
     m.t = G.shop.prep * (G.flags.cook2 ? 0.6 : 1);
     m.done = false;
     SFX.start();
@@ -550,12 +599,44 @@ function finishAction(w) {
     G.delivery.taken = true;
     G.stock.a += G.delivery.qty.a;
     G.stock.b += G.delivery.qty.b;
-    G.cash -= G.delivery.cost;
-    G.supplyToday += G.delivery.cost;
-    pop(w.x, w.y - 22, '-' + G.delivery.cost, '#e2544a');
+    G.supplyBill += G.delivery.cost;
+    pop(w.x, w.y - 22, '-' + G.delivery.cost, '#e8a33d');
     SFX.coin();
-    UI.toast('รับของเข้าสต็อกแล้ว');
+    UI.toast('รับของเข้าสต็อกแล้ว · ค่าของ ' + G.delivery.cost.toLocaleString() + '฿ ไปหักตอนปิดบัญชี');
   }
+}
+
+/* รับออเดอร์ 1 ใบ · ยอดขายขึ้นทันที แต่เงินสดเข้าเฉพาะออเดอร์หน้าร้าน */
+function takeOrderFrom(c, w) {
+  const amount = G.shop.price * c.qty;
+  G.ordersTaken++;
+  G.todaySales += amount;
+  c.paid = amount;
+  c.paidCash = !c.isRider;
+  if (c.isRider) {
+    G.platformToday += amount;                 // แพลตฟอร์มโอนให้ทีหลัง
+  } else {
+    G.cashInToday += amount;
+    G.cash += amount;
+  }
+  G.orderQueue.push(c.qty);
+  c.state = 'toWait';
+  c.say('coin', 1.0);
+  G.waiting.push(c);
+  c.goTo(WAIT_SLOTS[Math.min(G.waiting.length - 1, WAIT_SLOTS.length - 1)]);
+  const at = w || c;
+  pop(at.x, at.y - 22, (c.isRider ? '' : '+') + amount, c.isRider ? '#5bc8e8' : '#ffd34d');
+  SFX.coin();
+}
+
+/* ลูกค้าที่จ่ายแล้วแต่ไม่ได้ของ ต้องคืนเงิน · ยอดขายไม่ถูกหัก แต่เงินสดหาย */
+function refundCustomer(c) {
+  if (!c.paid) return;
+  G.refundToday += c.paid;
+  if (c.paidCash) { G.cash -= c.paid; G.cashInToday -= c.paid; }
+  else { G.platformToday -= c.paid; }
+  pop(c.x, c.y - 26, '-' + c.paid, '#e2544a');
+  c.paid = 0;
 }
 
 /* ---------- พนักงาน AI ---------- */
@@ -676,41 +757,71 @@ function tutorialTick() {
   }
 }
 
+/* หมดเวลาขาย ปิดประตูแล้วเคลียร์เฉพาะออเดอร์ที่รับเงินไปแล้ว */
+function beginClosing() {
+  if (G.closing) return;
+  G.closing = true;
+  G.graceLeft = RULES.closingGrace;
+  SFX.close();
+  const goHome = G.queue.slice();
+  if (G.orderSpotCust && G.orderSpotCust.state !== 'ordering') goHome.push(G.orderSpotCust);
+  for (const c of goHome) {
+    c.state = 'leave';
+    c.goTo([ENTRY_X, 12]);
+  }
+  G.queue = [];
+  if (G.orderSpotCust && G.orderSpotCust.state !== 'ordering') G.orderSpotCust = null;
+  UI.toast('หมดเวลาขาย · เคลียร์ออเดอร์ที่รับเงินไปแล้วให้จบ ' + RULES.closingGrace + ' วินาที');
+}
+
 /* ---------- ปิดร้าน ---------- */
 function closeStore() {
   G.running = false;
-  SFX.close();
-  // คนที่จ่ายเงินแล้วแต่ยังไม่ได้ของ นับเป็นลูกค้าที่ผิดหวัง
+  // คนที่จ่ายเงินแล้วแต่ยังไม่ได้ของ ต้องคืนเงินและนับเป็นลูกค้าที่ผิดหวัง
   // ส่วนคนที่ยังไม่ได้สั่ง แค่กลับบ้านเพราะร้านปิด
+  // หมดเวลาเคลียร์แล้ว ใครที่จ่ายเงินแล้วยังไม่ได้ของ ต้องคืนเงินและเสียเรตติ้ง
+  G.lateServed = 0;
   for (const c of G.customers) {
     if (c.state === 'leave') continue;
-    const paid = c.state === 'wait' || c.state === 'toWait' || c.state === 'toCollect' || c.state === 'collect';
-    if (paid) { countLeave(c); c.say('angry', 1.6); }
+    if (c.paid > 0) { refundCustomer(c); countLeave(c); c.say('angry', 1.6); }
     c.state = 'leave';
     c.goTo([ENTRY_X, 12]);
   }
   G.queue = []; G.waiting = []; G.collectors = []; G.orderSpotCust = null;
 
-  // ของที่ยังไม่ได้ไปรับ รับตอนปิดร้าน
+  // ของที่ยังไม่ได้ไปรับ ซัพพลายเออร์ฝากไว้ตอนปิดร้าน
   let lateNote = null;
   if (G.delivery.due && G.delivery.arrived && !G.delivery.taken) {
     G.stock.a += G.delivery.qty.a;
     G.stock.b += G.delivery.qty.b;
-    G.cash -= G.delivery.cost;
-    G.supplyToday += G.delivery.cost;
+    G.supplyBill += G.delivery.cost;
     G.delivery.taken = true;
-    lateNote = 'ของที่ยังไม่ได้ไปรับ ซัพพลายเออร์ฝากไว้ตอนปิดร้าน และหักเงินแล้ว';
+    lateNote = 'ของที่ยังไม่ได้ไปรับ ซัพพลายเออร์ฝากไว้ตอนปิดร้าน ค่าของยังต้องจ่ายเท่าเดิม';
   }
-  G.cash -= G.wageToday;
+
+  // เงินเดลิเวอรีของเมื่อวาน โอนเข้าวันนี้ และตั้งยอดรอโอนของวันนี้
+  G.cash += G.platformIn;
+  G.platformDue = Math.round(G.platformToday * (1 - RULES.platformCut));
 
   G.lastResult = {
     day: G.day,
     sales: G.todaySales,
-    served: G.servedToday,
-    left: G.leftToday,
+    cashIn: G.cashInToday,
+    refund: G.refundToday,
+    platformToday: G.platformToday,
+    platformIn: G.platformIn,
+    platformDue: G.platformDue,
+    openingCash: G.openingCash,
     wage: G.wageToday,
-    supply: G.supplyToday,
-    cash: G.cash,
+    rent: G.rentToday,
+    supply: G.supplyBill,
+    expense: G.wageToday + G.rentToday + G.supplyBill,
+    served: G.servedToday,
+    lateServed: G.lateServed,
+    left: G.leftToday,
+    orders: G.ordersTaken,
+    items: G.itemsStarted,
+    cash: G.cash,                 // ก่อนกดสรุปจ่าย
     stock: { a: G.stock.a, b: G.stock.b },
     lateNote: lateNote
   };
@@ -730,6 +841,17 @@ function ratingLabel() {
   const n = G.reviews.good + G.reviews.bad;
   if (n < RULES.ratingMinReviews) return '0.0 · New Store';
   return ratingValue().toFixed(1) + ' ★';
+}
+
+/* กดปุ่มสรุปจ่ายตอนปิดบัญชี เงินสดถึงจะออกจริง */
+function settlePayments() {
+  if (G.settled) return G.lastResult;
+  G.settled = true;
+  G.cash -= G.lastResult.expense;
+  G.lastResult.cash = G.cash;
+  G.lastResult.settled = true;
+  SFX.coin();
+  return G.lastResult;
 }
 
 /* ---------- การตัดสินใจตอนปิดร้าน ---------- */
@@ -770,11 +892,15 @@ function render() {
 
   // ของบนชั้นพัก
   for (let i = 0; i < G.tray.length; i++) {
-    drawArt(ctx, G.shop.item, TRAY_TILE[0] * TILE - 4 + i * 6, TRAY_TILE[1] * TILE + 5, 1);
+    const ix = TRAY_TILE[0] * TILE - 4 + i * 6, iy = TRAY_TILE[1] * TILE + 5;
+    drawArt(ctx, G.shop.item, ix, iy, 1);
+    if (G.tray[i] > 1) drawQtyTag(ctx, G.tray[i], ix + 4, iy - 3, pal.accent, pal.counter);
   }
   // ของบนจุดส่งมอบ
   for (let i = 0; i < G.counterItems.length; i++) {
-    drawArt(ctx, G.shop.item, STATIONS.handoff.obj[0] * TILE + 1 + i * 9, 4 * TILE + 3, 1);
+    const ix = STATIONS.handoff.obj[0] * TILE + 1 + i * 9, iy = 4 * TILE + 3;
+    drawArt(ctx, G.shop.item, ix, iy, 1);
+    if (G.counterItems[i] > 1) drawQtyTag(ctx, G.counterItems[i], ix + 5, iy - 3, pal.accent, pal.counter);
   }
   // ลังของที่มาส่ง
   if (G.delivery.arrived && !G.delivery.taken) {
@@ -841,16 +967,16 @@ function useToken(key) {
     for (const c of G.queue.slice(0, 3)) list.push(c);
     for (const c of list) {
       if (n >= 3) break;
-      if (!canPromise()) break;
+      if (!canPromise(c.qty)) break;
       instantOrder(c);
       n++;
     }
     UI.toast('E.Token รับออเดอร์ให้ ' + n + ' คิว');
   } else if (key === 'stock') {
-    const pace = G.elapsed > 0.5 ? G.ordersTaken / G.elapsed : 0;
-    const projected = Math.ceil(pace * G.dayLen * 1.25) + 2;
+    const pace = G.elapsed > 0.5 ? G.unitsUsed / G.elapsed : 0;
+    const projected = Math.ceil(pace * G.dayLen * 1.3) + 4;
     const need = Math.max(0, projected - Math.min(G.stock.a, G.stock.b));
-    G.tokenHint = { a: Math.max(6, need), b: Math.max(6, need) };
+    G.tokenHint = { a: Math.max(12, need), b: Math.max(12, need) };
     UI.toast('ของที่เหลือ ' + G.stock.a + '/' + G.stock.b + ' · คืนนี้ควรสั่งราว ' + G.tokenHint.a + ' ชุด จดไว้ให้แล้ว');
   } else if (key === 'summary') {
     const risk = G.customers.filter(c => c.patience < 0.35 && c.state !== 'leave').length;
@@ -866,13 +992,5 @@ function instantOrder(c) {
     reflowQueue();
   }
   if (G.orderSpotCust === c) G.orderSpotCust = null;
-  G.ordersTaken++;
-  G.cash += G.shop.price;
-  G.todaySales += G.shop.price;
-  c.state = 'toWait';
-  c.say('coin', 1.0);
-  G.waiting.push(c);
-  c.goTo(WAIT_SLOTS[Math.min(G.waiting.length - 1, WAIT_SLOTS.length - 1)]);
-  pop(c.x, c.y - 26, '+' + G.shop.price, '#ffd34d');
-  SFX.coin();
+  takeOrderFrom(c, null);
 }

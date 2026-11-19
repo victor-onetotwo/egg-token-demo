@@ -78,6 +78,8 @@ body { min-height: 100svh; }
   opacity: .22;
   transition: width .08s linear;
 }
+.timer.closing { border-color: #e2544a; }
+.timer.closing .timer-fill { background: #e2544a; opacity: .3; }
 .timer span {
   position: absolute; inset: 0;
   display: grid; place-items: center;
@@ -243,6 +245,7 @@ canvas {
 .card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
 .card-icon { font-size: 18px; }
 .card-title { font-size: 13px; font-weight: 700; }
+.card-cost { font-size: 12px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 .card-sub { font-size: 11px; color: var(--sub); line-height: 1.5; }
 .swatch { display: flex; gap: 2px; margin-bottom: 2px; }
 .swatch i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); }

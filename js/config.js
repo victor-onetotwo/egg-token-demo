@@ -8,60 +8,78 @@ const COLS = 12;
 const ROWS = 13;            // แถว 12 = นอกจอ ใช้เป็นทางเข้า-ออก
 const VIEW = TILE * COLS;   // 192 px
 
-/* ---------- ประเภทร้าน ---------- */
+/* ---------- ประเภทร้าน ----------
+   setup = เงินลงทุนอุปกรณ์หน้าร้านครั้งแรก
+   price = ราคาต่อชิ้น · ลูกค้า 1 คนสั่งได้ 1–3 ชิ้นต่อออเดอร์   */
 const SHOPS = {
   coffee: {
     key: 'coffee', name: 'ร้านกาแฟ', icon: '☕',
-    product: 'กาแฟ', price: 65, prep: 1.8, item: 'cup',
+    product: 'กาแฟ', price: 95, prep: 1.8, item: 'cup',
+    setup: 36000, setupNote: 'เครื่องชง เครื่องบด ตู้แช่นม',
     s2: 'เครื่องกาแฟ', s3: 'จุดหยิบแก้ว',
     s2hint: 'กดเริ่มชงล่วงหน้าได้ ถ้าเครื่องว่าง',
     preMake: true,
-    upgrade: { key: 'machine2', label: 'เครื่องกาแฟตัวที่ 2', cost: 900, wage: 0 },
+    upgrade: { key: 'machine2', label: 'เครื่องกาแฟตัวที่ 2', cost: 6000, wage: 0 },
     ing: [
-      { key: 'a', name: 'เมล็ดกาแฟ', cost: 12, start: 12 },
-      { key: 'b', name: 'นม', cost: 8, start: 12 }
+      { key: 'a', name: 'เมล็ดกาแฟ', cost: 14, start: 24 },
+      { key: 'b', name: 'นม', cost: 9, start: 24 }
     ]
   },
   ramen: {
     key: 'ramen', name: 'ร้านราเมง', icon: '🍜',
-    product: 'ราเมง', price: 85, prep: 2.3, item: 'bowl',
+    product: 'ราเมง', price: 110, prep: 2.3, item: 'bowl',
+    setup: 42000, setupNote: 'เตา หม้อต้ม ระบบระบายควัน',
     s2: 'ช่องส่งตั๋ว', s3: 'ช่องอาหารออก',
     s2hint: 'ส่งตั๋วเข้าครัวได้เมื่อมีออเดอร์',
     preMake: false,
-    upgrade: { key: 'cook2', label: 'คนครัวคนที่ 2', cost: 400, wage: 150 },
+    upgrade: { key: 'cook2', label: 'คนครัวคนที่ 2', cost: 2500, wage: 250 },
     ing: [
-      { key: 'a', name: 'เส้น', cost: 14, start: 12 },
-      { key: 'b', name: 'ลูกชิ้น', cost: 12, start: 12 }
+      { key: 'a', name: 'เส้น', cost: 17, start: 24 },
+      { key: 'b', name: 'ลูกชิ้น', cost: 14, start: 24 }
     ]
   },
   burger: {
     key: 'burger', name: 'ร้านเบอร์เกอร์', icon: '🍔',
-    product: 'เบอร์เกอร์', price: 95, prep: 2.1, item: 'burger',
+    product: 'เบอร์เกอร์', price: 105, prep: 2.1, item: 'burger',
+    setup: 39000, setupNote: 'เตาย่าง ตู้แช่ เครื่องอุ่นขนมปัง',
     s2: 'ช่องส่งตั๋ว', s3: 'ช่องอาหารออก',
     s2hint: 'ส่งตั๋วเข้าครัวได้เมื่อมีออเดอร์',
     preMake: false,
-    upgrade: { key: 'cook2', label: 'คนครัวคนที่ 2', cost: 400, wage: 150 },
+    upgrade: { key: 'cook2', label: 'คนครัวคนที่ 2', cost: 2500, wage: 250 },
     ing: [
-      { key: 'a', name: 'ขนมปัง', cost: 10, start: 12 },
-      { key: 'b', name: 'แพตตี้', cost: 20, start: 12 }
+      { key: 'a', name: 'ขนมปัง', cost: 13, start: 24 },
+      { key: 'b', name: 'แพตตี้', cost: 21, start: 24 }
     ]
   }
 };
 
 /* ---------- ทำเล ----------
-   บรีฟยังไม่ล็อกผลของแต่ละทำเล ที่ใส่ไว้คือค่าเริ่มต้นแบบอ่อน ๆ
-   ปรับได้ที่ flow (จำนวนลูกค้า) และ note (ข้อความอธิบาย)      */
+   deposit = ค่าเซ้ง/มัดจำ จ่ายครั้งเดียวตอนตั้งร้าน
+   rent    = ค่าเช่าต่อวัน หักตอนปิดบัญชีสิ้นวัน
+   บรีฟยังไม่ล็อกผลอื่นของทำเล flow คือจำนวนลูกค้าเทียบกับฐาน   */
 const LOCATIONS = {
-  office: { key: 'office', name: 'ใกล้ออฟฟิศ', flow: 1.0, note: 'คนทำงานมาเป็นช่วง ๆ สั่งง่าย' },
-  community: { key: 'community', name: 'ใกล้ชุมชน', flow: 0.9, note: 'ลูกค้าสม่ำเสมอ ไม่กระชาก' },
-  mall: { key: 'mall', name: 'ในห้างสรรพสินค้า', flow: 1.15, note: 'คนเยอะกว่า แต่มากันเป็นกลุ่ม' }
+  office: {
+    key: 'office', name: 'ใกล้ออฟฟิศ', flow: 1.0,
+    deposit: 20000, rent: 350,
+    note: 'คนทำงานมาเป็นช่วง ๆ สั่งง่าย'
+  },
+  community: {
+    key: 'community', name: 'ใกล้ชุมชน', flow: 0.9,
+    deposit: 16000, rent: 250,
+    note: 'ลูกค้าสม่ำเสมอ ไม่กระชาก ค่าเช่าถูกสุด'
+  },
+  mall: {
+    key: 'mall', name: 'ในห้างสรรพสินค้า', flow: 1.15,
+    deposit: 24000, rent: 500,
+    note: 'คนเยอะกว่า แต่มากันเป็นกลุ่ม ค่าเช่าแพงสุด'
+  }
 };
 
 /* ---------- ธีม ----------
    สีร้าน สีตัวละคร ขนาดกลุ่มลูกค้า และความอดทน      */
 const THEMES = {
   modern: {
-    key: 'modern', name: 'โมเดิร์น',
+    key: 'modern', name: 'โมเดิร์น', setup: 18000,
     desc: 'ร้านโทนขาวดำ ตัวละครสีปกติ ลูกค้ามาเดี่ยว สั่งง่าย อดทนสูง',
     group: [1, 1], patience: 1.25,
     pal: {
@@ -81,7 +99,7 @@ const THEMES = {
     ]
   },
   sweet: {
-    key: 'sweet', name: 'หวาน',
+    key: 'sweet', name: 'หวาน', setup: 20000,
     desc: 'ร้านชมพูอ่อน ตัวละครพาสเทล ลูกค้ามักมาคู่ รอได้ไม่นาน',
     group: [2, 2], patience: 0.85,
     pal: {
@@ -101,7 +119,7 @@ const THEMES = {
     ]
   },
   cyber: {
-    key: 'cyber', name: 'ไซเบอร์พังก์',
+    key: 'cyber', name: 'ไซเบอร์พังก์', setup: 22000,
     desc: 'ร้านและตัวละครสีฉูดฉาด วัยรุ่นมากันกลุ่มละ 4–6 คน',
     group: [4, 6], patience: 1.0,
     pal: {
@@ -129,15 +147,19 @@ const RIDER_PAL = { skin: '#e0b183', hair: '#1c1c1c', shirt: '#17a34a', pants: '
 
 /* ---------- ค่าเกม ---------- */
 const RULES = {
-  startCash: 3000,
+  startCash: 100000,      // เงินทุนตั้งต้น ก่อนหักค่าลงทุนตอนตั้งร้าน
   dayLength: 15,          // วินาทีต่อวัน เฉพาะช่วงเปิดร้าน
-  wageBase: 120,          // ค่าแรงต่อวัน พนักงานยังไม่เทรน (ขนาดเดโม)
-  wageTrained: 180,       // หลังเทรน
-  trainCost: 300,
-  deliveryFee: 150,
+  wageBase: 200,          // ค่าแรงต่อวัน พนักงานยังไม่เทรน
+  wageTrained: 280,       // หลังเทรน
+  trainCost: 1200,        // ค่าเทรน จ่ายครั้งเดียว
+  deliveryFee: 600,       // ค่าสมัครเข้าระบบเดลิเวอรี จ่ายครั้งเดียว
+  platformCut: 0.15,      // ค่าคอมแพลตฟอร์มเดลิเวอรี
+  platformDelay: 1,       // เงินเดลิเวอรีเข้าช้ากว่า 1 วัน
+  orderQtyWeights: [35, 30, 20, 15],  // โอกาสที่ลูกค้าจะสั่ง 1 / 2 / 3 / 4 ชิ้น
+  closingGrace: 6,        // วินาทีหลังปิดร้าน ให้เคลียร์ออเดอร์ที่ค้าง
   tokensPerDay: 3,
   queuePatience: 8,       // วินาที ก่อนลูกค้าเดินออกจากคิวสั่ง (คูณด้วยค่าธีม)
-  waitPatience: 9,        // วินาที ก่อนลูกค้าเดินออกจากจุดรอรับ
+  waitPatience: 10,       // วินาที ก่อนลูกค้าเดินออกจากจุดรอรับ
   chatRefill: 0.55,       // คุยกับลูกค้า 1 ครั้ง เติมความอดทนเท่าไร
   takeOrderTime: 0.5,
   pickTime: 0.3,

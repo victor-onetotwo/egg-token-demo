@@ -68,6 +68,9 @@ class Customer extends Actor {
     super([ENTRY_X, 12], 'cust', pal, isRider ? { helmet: RIDER_PAL.helmet } : {});
     this.state = 'enter';
     this.patience = 1;
+    this.qty = 1;          // จำนวนชิ้นในออเดอร์
+    this.paid = 0;         // จ่ายมาแล้วเท่าไร ใช้ตอนคืนเงิน
+    this.paidCash = true;  // จ่ายเป็นเงินสดหน้าร้าน หรือมาทางแพลตฟอร์ม
     this.slot = -1;
     this.isRider = !!isRider;
     this.actT = 0;
@@ -82,6 +85,7 @@ class Customer extends Actor {
     super.draw(ctx);
     if (this.state === 'queue' || this.state === 'order' || this.state === 'wait') {
       drawBar(ctx, this.x - 5, this.y - 20, 10, this.patience);
+      if (this.qty > 1) drawQtyTag(ctx, this.qty, this.x + 6, this.y - 28, '#15121c', '#ffd34d');
     }
     if (this.hold) drawArt(ctx, this.hold, this.x - 4, this.y - 28, 1);
     if (this.bubble > 0 && this.bubbleKind) {
@@ -134,7 +138,10 @@ class Worker extends Actor {
 
   draw(ctx) {
     super.draw(ctx);
-    if (this.hold) drawArt(ctx, this.hold, this.x - 4, this.y - 26, 1);
+    if (this.hold) {
+      drawArt(ctx, G.shop.item, this.x - 4, this.y - 26, 1);
+      if (this.hold > 1) drawQtyTag(ctx, this.hold, this.x + 3, this.y - 28, '#15121c', '#ffd34d');
+    }
     if (this.busyT > 0 && this.busyKind) {
       const w = 12;
       px(ctx, this.x - w / 2 - 1, this.y - 20, w + 2, 4, '#15121c');

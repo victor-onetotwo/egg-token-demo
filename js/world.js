@@ -179,6 +179,18 @@ function drawBadge(ctx, n, x, y, bg, ink) {
   }
 }
 
+/* ป้ายจำนวนชิ้นเล็ก ๆ ติดกับของหรือตัวลูกค้า */
+function drawQtyTag(ctx, n, x, y, bg, ink) {
+  const rows = DIGITS[n];
+  if (!rows) return;
+  px(ctx, x, y, 5, 7, bg || '#15121c');
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (rows[r][c] === '#') px(ctx, x + 1 + c, y + 1 + r, 1, 1, ink || '#ffffff');
+    }
+  }
+}
+
 function drawStationBadges(ctx, pal) {
   const bg = pal.counter, ink = pal.accent;
   drawBadge(ctx, 1, 6 * TILE + 5, 4 * TILE + 4, ink, bg);     // แคชเชียร์

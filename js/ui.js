@@ -28,21 +28,25 @@ const UI = (function () {
   /* ---------- หน้าตั้งร้าน ---------- */
   function showSetup() {
     G.screen = 'setup';
+    const money = n => n.toLocaleString() + '฿';
     const shopCards = Object.values(SHOPS).map(s => `
-      <button class="card" data-group="shop" data-key="${s.key}">
+      <button class="card" data-group="shop" data-key="${s.key}" data-cost="${s.setup}">
         <span class="card-icon">${s.icon}</span>
         <span class="card-title">${s.name}</span>
-        <span class="card-sub">${s.product} ${s.price}฿ · ${s.ing[0].name} + ${s.ing[1].name}</span>
+        <span class="card-cost">${money(s.setup)}</span>
+        <span class="card-sub">${s.setupNote}<br>${s.product} ${s.price}฿ · ${s.ing[0].name} + ${s.ing[1].name}</span>
       </button>`).join('');
     const locCards = Object.values(LOCATIONS).map(l => `
-      <button class="card" data-group="loc" data-key="${l.key}">
+      <button class="card" data-group="loc" data-key="${l.key}" data-cost="${l.deposit}">
         <span class="card-title">${l.name}</span>
-        <span class="card-sub">${l.note}</span>
+        <span class="card-cost">${money(l.deposit)}</span>
+        <span class="card-sub">ค่าเช่า ${l.rent}฿/วัน<br>${l.note}</span>
       </button>`).join('');
     const themeCards = Object.values(THEMES).map(t => `
-      <button class="card theme-${t.key}" data-group="theme" data-key="${t.key}">
+      <button class="card theme-${t.key}" data-group="theme" data-key="${t.key}" data-cost="${t.setup}">
         <span class="swatch"><i style="background:${t.pal.floor}"></i><i style="background:${t.pal.counter}"></i><i style="background:${t.pal.accent}"></i></span>
         <span class="card-title">${t.name}</span>
+        <span class="card-cost">${money(t.setup)}</span>
         <span class="card-sub">${t.desc}</span>
       </button>`).join('');
 
@@ -50,13 +54,30 @@ const UI = (function () {
       <div class="sheet-head">
         <div class="kicker"><span class="pix">EGG TOKEN · DEMO</span></div>
         <h1>ตั้งร้านก่อนเปิดวันแรก</h1>
-        <p class="lead">เลือก 3 อย่าง แล้วเริ่มด้วยเงิน ${RULES.startCash.toLocaleString()}฿ กับวัตถุดิบที่มีจำกัด เดโมนี้ยาว 7 วัน วันละ ${RULES.dayLength} วินาที</p>
+        <p class="lead">เงินทุนตั้งต้น ${money(RULES.startCash)} · ทั้งสามอย่างคือเงินลงทุนที่ต้องจ่ายก่อนเปิดร้าน
+        เลือกเสร็จจะเหลือเป็นเงินสดไว้หมุนในร้าน เดโมนี้ยาว 7 วัน วันละ ${RULES.dayLength} วินาที</p>
       </div>
-      <div class="group"><h2>1 · ประเภทร้าน</h2><div class="cards">${shopCards}</div></div>
-      <div class="group"><h2>2 · ทำเล</h2><div class="cards">${locCards}</div></div>
-      <div class="group"><h2>3 · ธีม</h2><div class="cards">${themeCards}</div></div>
+      <div class="group"><h2>1 · ประเภทร้าน · ค่าอุปกรณ์</h2><div class="cards">${shopCards}</div></div>
+      <div class="group"><h2>2 · ทำเล · ค่าเซ้ง และค่าเช่ารายวัน</h2><div class="cards">${locCards}</div></div>
+      <div class="group"><h2>3 · ธีม · ค่าตกแต่งร้าน</h2><div class="cards">${themeCards}</div></div>
+      <div class="rows" id="invest-box">
+        <div class="row"><span>เงินทุนตั้งต้น</span><b>${money(RULES.startCash)}</b></div>
+        <div class="row"><span>เงินลงทุนที่เลือก</span><b class="neg" id="inv-total">0฿</b></div>
+        <div class="row total"><span>เหลือเป็นเงินสดหมุนในร้าน</span><b id="inv-left">0฿</b></div>
+        <div class="row"><span>ค่าเช่าที่ต้องจ่ายทุกวัน</span><b id="inv-rent">0฿</b></div>
+      </div>
       <div class="sheet-foot"><button class="btn primary" id="btn-start">เปิดร้าน</button></div>
     `, 'setup');
+
+    function syncInvest() {
+      const total = SHOPS[sel.shop].setup + LOCATIONS[sel.loc].deposit + THEMES[sel.theme].setup;
+      const left = RULES.startCash - total;
+      $('inv-total').textContent = '-' + money(total);
+      $('inv-left').textContent = money(left);
+      $('inv-left').className = left < 0 ? 'neg' : '';
+      $('inv-rent').textContent = money(LOCATIONS[sel.loc].rent) + ' / วัน';
+      $('btn-start').disabled = left < 0;
+    }
 
     el.sheet.querySelectorAll('.card').forEach(b => {
       if (sel[b.dataset.group] === b.dataset.key) b.classList.add('on');
@@ -66,6 +87,7 @@ const UI = (function () {
         b.classList.add('on');
         SFX.unlock(); SFX.click();
         if (b.dataset.group === 'theme') applyTheme(THEMES[b.dataset.key]);
+        syncInvest();
       });
     });
     $('btn-start').addEventListener('click', () => {
@@ -74,6 +96,7 @@ const UI = (function () {
       newGame(sel.shop, sel.theme, sel.loc);
     });
     applyTheme(THEMES[sel.theme]);
+    syncInvest();
   }
 
   /* ---------- ก่อนเปิดร้านแต่ละวัน ---------- */
@@ -93,7 +116,8 @@ const UI = (function () {
         <p class="lead">${d.intro}</p>
       </div>
       <ul class="facts">
-        <li>เงินสด <b>${G.cash.toLocaleString()}฿</b> · สต็อก ${stockLine}</li>
+        <li>เงินสด <b>${Math.round(G.cash).toLocaleString()}฿</b> · สต็อก ${stockLine}</li>
+        <li>ค่าเช่า ${G.loc.rent.toLocaleString()}฿ และค่าแรง หักตอนปิดบัญชีสิ้นวัน</li>
         <li>${staffLine}</li>
         ${deliv}${rider}${chat}
         <li>E.Token วันนี้ ${RULES.tokensPerDay} ครั้ง</li>
@@ -112,8 +136,14 @@ const UI = (function () {
     el.sales.textContent = G.todaySales.toLocaleString() + '฿';
     el.stock.textContent = G.stock.a + ' / ' + G.stock.b;
     el.stock.classList.toggle('low', G.stock.a <= 2 || G.stock.b <= 2);
-    el.clock.textContent = G.timeLeft.toFixed(1) + 's';
-    el.bar.style.width = Math.max(0, (G.timeLeft / G.dayLen) * 100) + '%';
+    if (G.closing) {
+      el.clock.textContent = 'เคลียร์คิว ' + Math.max(0, G.graceLeft).toFixed(1) + 's';
+      el.bar.style.width = Math.max(0, (G.graceLeft / RULES.closingGrace) * 100) + '%';
+    } else {
+      el.clock.textContent = G.timeLeft.toFixed(1) + 's';
+      el.bar.style.width = Math.max(0, (G.timeLeft / G.dayLen) * 100) + '%';
+    }
+    el.timer.classList.toggle('closing', !!G.closing);
     el.token.textContent = 'E.Token ×' + G.tokens;
     el.token.disabled = G.tokens <= 0 || !G.running;
     el.rating.parentElement.classList.toggle('hidden', !(d && d.rating));
@@ -140,33 +170,109 @@ const UI = (function () {
   }
 
   /* ---------- สรุปตอนปิดร้าน ---------- */
+  /* ---------- ปิดบัญชีสิ้นวัน 3 หมวด ---------- */
+  const baht = n => Math.round(n).toLocaleString() + '฿';
+
+  // หมวดที่ 1 · รายได้ — ยอดขาย เทียบกับ เงินที่เข้ามาจริง
   function showSummary(r) {
-    const s = G.shop;
-    const profit = r.sales - r.wage - r.supply;
+    const cashIn = r.cashIn + r.platformIn;
+    const gap = cashIn - r.sales;
     openSheet(`
       <div class="sheet-head">
         <div class="kicker"><span class="pix">DAY ${r.day}</span> · ปิดร้านแล้ว</div>
-        <h1>สรุปวันนี้</h1>
+        <h1>1 · รายได้</h1>
+        <p class="lead">ยอดขายที่บันทึกหน้าร้าน กับเงินที่เข้ามาจริง ไม่เท่ากันเสมอไป ตรงนี้คือจุดที่ต้องกระทบยอด</p>
       </div>
       <div class="rows">
-        <div class="row"><span>ยอดขาย</span><b class="pos">+${r.sales.toLocaleString()}฿</b></div>
-        <div class="row"><span>ค่าวัตถุดิบที่รับวันนี้</span><b class="neg">-${r.supply.toLocaleString()}฿</b></div>
-        <div class="row"><span>ค่าแรง</span><b class="neg">-${r.wage.toLocaleString()}฿</b></div>
-        <div class="row total"><span>เหลือจากวันนี้</span><b class="${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${profit.toLocaleString()}฿</b></div>
-        <div class="row"><span>เงินสดคงเหลือ</span><b>${Math.round(r.cash).toLocaleString()}฿</b></div>
+        <div class="row"><span>ยอดขายที่บันทึก · ${r.orders} ออเดอร์</span><b class="pos">${baht(r.sales)}</b></div>
+        <div class="row"><span>คืนเงินลูกค้าที่ไม่ได้รับของ</span><b class="${r.refund ? 'neg' : ''}">${r.refund ? '-' + baht(r.refund) : '0฿'}</b></div>
+        ${r.platformToday ? `<div class="row"><span>ยอดเดลิเวอรี ยังไม่เข้าเงินสด</span><b class="neg">-${baht(r.platformToday)}</b></div>` : ''}
+        ${r.platformIn ? `<div class="row"><span>เงินเดลิเวอรีเมื่อวาน โอนเข้าวันนี้</span><b class="pos">+${baht(r.platformIn)}</b></div>` : ''}
+        <div class="row total"><span>เงินสดเข้าวันนี้</span><b>${baht(cashIn)}</b></div>
+      </div>
+      <p class="note ${gap < 0 ? 'warn' : ''}">
+        ${gap === 0
+          ? 'วันนี้ยอดขายกับเงินเข้าตรงกันพอดี'
+          : 'ต่างจากยอดขาย ' + (gap > 0 ? '+' : '') + baht(gap) + ' — ' +
+            [r.refund ? 'คืนเงินไป ' + baht(r.refund) : '',
+             r.platformToday ? 'เดลิเวอรีค้างรับ ' + baht(r.platformToday) : '',
+             r.platformIn ? 'ได้เงินเมื่อวานคืนมา ' + baht(r.platformIn) : ''].filter(Boolean).join(' · ')}
+      </p>
+      <div class="sheet-foot"><button class="btn primary" id="btn-cash">ถัดไป · ยอดเงินสด</button></div>
+    `, 'income');
+    $('btn-cash').addEventListener('click', () => showCashStep(r));
+  }
+
+  // หมวดที่ 2 · ยอดเงินสด — ยกมา + เข้าวันนี้ − ค่าใช้จ่าย โดยต้องกดสรุปจ่ายเอง
+  function showCashStep(r) {
+    const cashIn = r.cashIn + r.platformIn;
+    const after = r.openingCash + cashIn - r.expense;
+    const done = !!G.settled;
+    openSheet(`
+      <div class="sheet-head">
+        <div class="kicker"><span class="pix">DAY ${r.day}</span> · ปิดบัญชี</div>
+        <h1>2 · ยอดเงินสด</h1>
+        <p class="lead">เงินสดยกมาจากเมื่อวาน บวกเงินเข้าวันนี้ แล้วหักค่าใช้จ่ายที่ต้องจ่ายจริงตอนปิดร้าน</p>
       </div>
       <div class="rows">
-        <div class="row"><span>เสิร์ฟได้</span><b>${r.served} คน</b></div>
-        <div class="row"><span>ลูกค้าเดินออก</span><b class="${r.left ? 'neg' : ''}">${r.left} คน</b></div>
+        <div class="row"><span>เงินสดยกมาเมื่อวาน</span><b>${baht(r.openingCash)}</b></div>
+        <div class="row"><span>เงินสดเข้าวันนี้</span><b class="pos">+${baht(cashIn)}</b></div>
+        <div class="row"><span>ค่าแรง${G.flags.hired ? ' · ' + (G.flags.hired2 ? 2 : 1) + ' คน' : ''}</span><b class="neg">-${baht(r.wage)}</b></div>
+        <div class="row"><span>ค่าเช่า · ${G.loc.name}</span><b class="neg">-${baht(r.rent)}</b></div>
+        <div class="row"><span>ค่าของที่รับวันนี้</span><b class="neg">-${baht(r.supply)}</b></div>
+        <div class="row total"><span>${done ? 'เงินสดคงเหลือ' : 'เงินสดคงเหลือ (หลังจ่าย)'}</span><b class="${after < 0 ? 'neg' : ''}">${baht(after)}</b></div>
+      </div>
+      ${r.lateNote ? `<p class="note warn">${r.lateNote}</p>` : ''}
+      <p class="note" id="pay-note">${done ? 'จ่ายเรียบร้อยแล้ว' : 'ต้องกดสรุปจ่ายก่อน เงินถึงจะออกจากลิ้นชักจริง'}</p>
+      <div class="sheet-foot">
+        <button class="btn primary" id="btn-pay" ${done ? 'disabled' : ''}>${done ? 'จ่ายแล้ว' : 'สรุปจ่าย · ' + baht(r.expense)}</button>
+        <button class="btn" id="btn-report" ${done ? '' : 'disabled'}>ถัดไป · รายงานปิดบัญชี</button>
+      </div>
+    `, 'cash');
+    $('btn-pay').addEventListener('click', () => {
+      settlePayments();
+      $('btn-pay').disabled = true;
+      $('btn-pay').textContent = 'จ่ายแล้ว';
+      $('btn-report').disabled = false;
+      $('pay-note').textContent = 'จ่ายค่าแรง ค่าเช่า และค่าของเรียบร้อยแล้ว';
+      toast('ตัดเงินสด ' + baht(r.expense) + ' เรียบร้อย');
+    });
+    $('btn-report').addEventListener('click', () => showClosingReport(r));
+  }
+
+  // หมวดที่ 3 · รายงานการปิดบัญชีประจำวัน
+  function showClosingReport(r) {
+    const s = G.shop;
+    const cashIn = r.cashIn + r.platformIn;
+    const profit = cashIn - r.expense;
+    const gap = cashIn - r.sales;
+    const last = r.day >= DAYS.length;
+    openSheet(`
+      <div class="sheet-head">
+        <div class="kicker"><span class="pix">DAY ${r.day}</span> · ปิดบัญชีประจำวัน</div>
+        <h1>3 · รายงานปิดบัญชี</h1>
+      </div>
+      <div class="rows">
+        <div class="row"><span>ยอดขาย</span><b>${baht(r.sales)}</b></div>
+        <div class="row"><span>เงินสดเข้าจริง</span><b>${baht(cashIn)}</b></div>
+        <div class="row"><span>ส่วนต่าง</span><b class="${gap < 0 ? 'neg' : ''}">${gap > 0 ? '+' : ''}${baht(gap)}</b></div>
+        <div class="row"><span>ค่าใช้จ่ายรวม</span><b class="neg">-${baht(r.expense)}</b></div>
+        <div class="row total"><span>กำไร-ขาดทุนของวัน</span><b class="${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${baht(profit)}</b></div>
+        <div class="row"><span>เงินสดคงเหลือ</span><b class="${r.cash < 0 ? 'neg' : ''}">${baht(r.cash)}</b></div>
+        ${r.platformDue ? `<div class="row"><span>ค้างรับจากแพลตฟอร์ม · เข้าพรุ่งนี้</span><b>${baht(r.platformDue)}</b></div>` : ''}
+      </div>
+      <div class="rows">
+        <div class="row"><span>เสิร์ฟได้ / เดินออก</span><b>${r.served} / <span class="${r.left ? 'neg' : ''}">${r.left}</span></b></div>
         ${DAYS[r.day - 1].rating ? `<div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>` : ''}
         <div class="row"><span>สต็อกคงเหลือ</span><b>${s.ing[0].name} ${r.stock.a} · ${s.ing[1].name} ${r.stock.b}</b></div>
       </div>
-      <p class="note">${r.left ? 'ยอดขายที่บันทึกไปแล้วไม่ถูกหัก แต่คนที่เดินออกไปกระทบเรตติ้ง' : 'วันนี้ไม่มีใครเดินออก'}</p>
-      ${r.lateNote ? `<p class="note warn">${r.lateNote}</p>` : ''}
-      <div class="sheet-foot"><button class="btn primary" id="btn-order">${r.day >= DAYS.length ? 'ดูผลรวม 7 วัน' : 'สั่งของสำหรับพรุ่งนี้'}</button></div>
-    `, 'summary');
+      <p class="note">${r.left
+        ? 'ลูกค้าที่จ่ายแล้วแต่ไม่ได้ของ ต้องคืนเงิน ยอดขายไม่ถูกหักก็จริง แต่เงินสดหายไปแล้ว และเรตติ้งก็เสียด้วย'
+        : 'วันนี้ไม่มีใครเดินออก เงินสดกับยอดขายเลยห่างกันน้อย'}</p>
+      <div class="sheet-foot"><button class="btn primary" id="btn-order">${last ? 'ดูผลรวม 7 วัน' : 'สั่งของสำหรับพรุ่งนี้'}</button></div>
+    `, 'report');
     $('btn-order').addEventListener('click', () => {
-      if (r.day >= DAYS.length) { closeSheet(); showDecision('final'); }
+      if (last) { closeSheet(); showDecision('final'); }
       else showOrderPanel();
     });
   }
@@ -175,7 +281,7 @@ const UI = (function () {
   function showOrderPanel() {
     const s = G.shop;
     const sug = G.tokenHint;
-    orderDraft = sug ? { a: sug.a, b: sug.b } : { a: Math.max(0, 8 - G.stock.a), b: Math.max(0, 8 - G.stock.b) };
+    orderDraft = sug ? { a: sug.a, b: sug.b } : { a: Math.max(0, 22 - G.stock.a), b: Math.max(0, 22 - G.stock.b) };
     openSheet(`
       <div class="sheet-head">
         <div class="kicker"><span class="pix">NIGHT ${G.day}</span> · ก่อนเปิดวันที่ ${G.day + 1}</div>
@@ -211,7 +317,8 @@ const UI = (function () {
     el.sheet.querySelectorAll('.stepper').forEach(st => {
       st.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
         const k = st.dataset.k;
-        orderDraft[k] = Math.max(0, Math.min(30, orderDraft[k] + Number(b.dataset.d)));
+        const step = (window.event && window.event.shiftKey) ? 5 : 1;
+        orderDraft[k] = Math.max(0, Math.min(60, orderDraft[k] + Number(b.dataset.d) * step));
         SFX.click(); sync();
       }));
     });
@@ -306,7 +413,11 @@ const UI = (function () {
     const served = h.reduce((n, r) => n + r.served, 0);
     const left = h.reduce((n, r) => n + r.left, 0);
     const invested = G.finalChoice === 'yes';
-    const rows = h.map(r => `<div class="row"><span>วัน ${r.day}</span><b>${r.sales.toLocaleString()}฿ · เสิร์ฟ ${r.served} · ออก ${r.left}</b></div>`).join('');
+    const profitAll = h.reduce((n, r) => n + (r.cashIn + r.platformIn - r.expense), 0);
+    const rows = h.map(r => {
+      const pf = r.cashIn + r.platformIn - r.expense;
+      return `<div class="row"><span>วัน ${r.day} · เสิร์ฟ ${r.served} ออก ${r.left}</span><b>${r.sales.toLocaleString()}฿ · <span class="${pf >= 0 ? 'pos' : 'neg'}">${pf >= 0 ? '+' : ''}${Math.round(pf).toLocaleString()}฿</span></b></div>`;
+    }).join('');
     openSheet(`
       <div class="sheet-head">
         <div class="kicker"><span class="pix">7 DAYS DONE</span></div>
@@ -314,7 +425,9 @@ const UI = (function () {
         <p class="lead">${invested ? 'คุณเลือกลงทุนเพิ่มกำลัง เงินสดลดลงแต่รับคิวได้มากขึ้นในวันถัดไป' : 'คุณเลือกเก็บเงินสดไว้ ปลอดภัยกว่า แต่คิวล้นยังเป็นปัญหาเดิม'}</p>
       </div>
       <div class="rows">
-        <div class="row total"><span>ยอดขายรวม</span><b class="pos">${sales.toLocaleString()}฿</b></div>
+        <div class="row"><span>เงินลงทุนตอนตั้งร้าน</span><b class="neg">-${G.invest.total.toLocaleString()}฿</b></div>
+        <div class="row total"><span>ยอดขายรวม 7 วัน</span><b class="pos">${sales.toLocaleString()}฿</b></div>
+        <div class="row"><span>กำไร-ขาดทุนรวม 7 วัน</span><b class="${profitAll >= 0 ? 'pos' : 'neg'}">${profitAll >= 0 ? '+' : ''}${Math.round(profitAll).toLocaleString()}฿</b></div>
         <div class="row"><span>เงินสดคงเหลือ</span><b>${Math.round(G.cash).toLocaleString()}฿</b></div>
         <div class="row"><span>เสิร์ฟได้ / เดินออก</span><b>${served} / <span class="${left ? 'neg' : ''}">${left}</span></b></div>
         <div class="row"><span>เรตติ้ง</span><b>${ratingLabel()}</b></div>
@@ -374,6 +487,7 @@ const UI = (function () {
     el = {
       overlay: $('overlay'), sheet: $('sheet'),
       day: $('hud-day'), cash: $('hud-cash'), sales: $('hud-sales'),
+      timer: document.querySelector('.timer'),
       stock: $('hud-stock'), clock: $('hud-clock'), bar: $('hud-bar'),
       token: $('hud-token'), rating: $('hud-rating'),
       served: $('hud-served'), left: $('hud-left'),
