@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Egg Token · CI หน้าทดลองฟอนต์ สี และสไปรต์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Mitr:wght@400;500;600&family=Noto+Sans+Thai:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/game.css">
+<style>
+  .page { max-width: 760px; margin: 0 auto; padding: 18px 16px 60px; }
+  .page h1 { font-size: 22px; margin: 0 0 6px; }
+  .page h2 { font-size: 15px; margin: 0 0 10px; color: var(--text); font-weight: 700; }
+  .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .sec > p { font-size: 13px; line-height: 1.7; color: var(--sub); margin: 0 0 12px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .pill { appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+          border-radius: 999px; padding: 7px 14px; font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pill.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .grid { display: grid; gap: 10px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .box { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .label { font-size: 11px; color: var(--sub); margin-bottom: 6px; letter-spacing: .03em; }
+  canvas.show { image-rendering: pixelated; display: block; background: transparent; }
+  .sw { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; }
+  .sw i { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(128,128,128,.35); display: block; }
+  .sw code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--sub); }
+  .type-row { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+  .type-row:last-child { border-bottom: 0; }
+  .f-pixel { font-family: 'Press Start 2P', monospace; font-size: 13px; line-height: 1.9; }
+  .f-plex { font-family: 'IBM Plex Sans Thai', sans-serif; }
+  .f-noto { font-family: 'Noto Sans Thai', sans-serif; }
+  .f-mitr { font-family: 'Mitr', sans-serif; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .do, .dont { font-size: 12.5px; line-height: 1.7; padding-left: 20px; position: relative; margin: 4px 0; }
+  .do::before { content: '✓'; position: absolute; left: 0; color: #1f9254; font-weight: 700; }
+  .dont::before { content: '✕'; position: absolute; left: 0; color: #d4453c; font-weight: 700; }
+  .back { display: inline-block; font-size: 13px; margin-bottom: 14px; color: var(--accent); text-decoration: none; font-weight: 600; }
+  .mini-hud { display: flex; flex-wrap: wrap; gap: 6px; }
+</style>
+</head>
+<body data-theme="modern">
+<div class="page">
+  <a class="back" href="index.html">← กลับไปเล่นเกม</a>
+  <div class="kicker"><span class="pix">EGG TOKEN · CI</span></div>
+  <h1>หน้าทดลองฟอนต์ สี สไปรต์ และ UI</h1>
+  <p style="font-size:13px;line-height:1.7;color:var(--sub);margin:0 0 16px">
+    หน้านี้แยกจากหน้าเล่น ใช้ลองของได้โดยไม่กระทบกติกาเกม ทุกอย่างในนี้อ่านค่าจากไฟล์เดียวกับเกม
+    (<code>js/config.js</code>, <code>js/sprites.js</code>, <code>js/world.js</code>) เปลี่ยนที่ไฟล์แล้วหน้านี้เปลี่ยนตาม
+  </p>
+
+  <div class="bar" id="theme-bar"></div>
+
+  <div class="sec">
+    <h2>1 · ตัวอักษร</h2>
+    <p>กติกา: ตัวพิกเซลใช้กับหัวข้อและป้ายที่เป็นอังกฤษหรือตัวเลขเท่านั้น ส่วนเวลา เงิน แถบรอ และคำสั่งบนมือถือ ใช้ฟอนต์ที่อ่านออกทันที</p>
+    <div class="grid g2">
+      <div class="box">
+        <div class="label">หัวข้อ / ป้าย (พิกเซล อังกฤษ-ตัวเลข)</div>
+        <div class="f-pixel">EGG TOKEN<br>DAY 3 / 7<br>E.TOKEN x3</div>
+      </div>
+      <div class="box">
+        <div class="label">ตัวเลขในเกม (ต้องอ่านปราดเดียว)</div>
+        <div class="num" style="font-size:22px">12.4s · 2,495฿ · 9 / 1</div>
+        <div class="label" style="margin-top:8px">ใช้ tabular-nums เลขจะไม่ขยับตอนนับถอยหลัง</div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="type-row">
+        <div class="label">IBM Plex Sans Thai — ที่ใช้อยู่ในเกม</div>
+        <div class="f-plex" style="font-size:16px">รับออเดอร์ → เริ่มทำ → หยิบของ → วางให้ลูกค้ามารับ</div>
+        <div class="f-plex" style="font-size:12.5px;color:var(--sub)">ลูกค้าเดินออกกระทบเรตติ้ง แต่ไม่หักยอดขายที่บันทึกไปแล้ว</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Noto Sans Thai — สำรอง อ่านง่ายพอกัน</div>
+        <div class="f-noto" style="font-size:16px">รับออเดอร์ → เริ่มทำ → หยิบของ → วางให้ลูกค้ามารับ</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Mitr — เหลี่ยมกว่า เข้ากับงานพิกเซล เหมาะกับหัวข้อสั้น ๆ</div>
+        <div class="f-mitr" style="font-size:16px">ร้านกาแฟ · ร้านราเมง · ร้านเบอร์เกอร์</div>
+      </div>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <div class="label">ไทยแบบพิกเซลจริง ๆ — วาดตัวหนังสือเล็กแล้วขยายแบบไม่เกลี่ยขอบ</div>
+      <canvas id="thai-pixel" class="show" width="520" height="250" style="max-width:100%"></canvas>
+      <p style="margin:10px 0 0">
+        ยังไม่มีฟอนต์พิกเซลไทยฟรีที่ครบวรรณยุกต์ วิธีนี้ใช้ฟอนต์ไทยปกติวาดลงแคนวาสขนาดเล็กแล้วขยายเป็นเท่าตัว
+        ได้ความรู้สึกพิกเซลโดยไม่ต้องทำฟอนต์เอง เหมาะกับหัวข้อหรือป้ายสั้น ๆ ไม่เหมาะกับข้อความยาวหรือตัวเลขที่ต้องอ่านเร็ว
+      </p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>2 · สีตามธีม</h2>
+    <p id="theme-desc"></p>
+    <div class="grid g2">
+      <div class="box"><div class="label">สีในฉาก</div><div id="pal-game"></div></div>
+      <div class="box"><div class="label">สีหน้าจอ UI</div><div id="pal-ui"></div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>3 · หน้าร้านและสถานี</h2>
+    <p>ผังเดียวกับในเกม ตัวเลข 1–4 ตรงกับปุ่มคำสั่งด้านล่างจอ · ③ อยู่ด้านหลังข้างจุดส่งมอบ แยกจาก ② ชัดเจน</p>
+    <canvas id="room" class="show" width="384" height="384" style="max-width:100%"></canvas>
+    <div class="grid g3" style="margin-top:12px">
+      <div class="box"><div class="label">① แคชเชียร์</div><div style="font-size:12.5px;line-height:1.6">รับออเดอร์เมื่อลูกค้ามาถึงเคาน์เตอร์ ถือของอยู่จะรับไม่ได้</div></div>
+      <div class="box"><div class="label">② เครื่อง / ช่องส่งตั๋ว</div><div style="font-size:12.5px;line-height:1.6" id="s2-note"></div></div>
+      <div class="box"><div class="label">③ จุดของออก</div><div style="font-size:12.5px;line-height:1.6">ของขึ้นเมื่อทำเสร็จเท่านั้น ไม่วางของเปล่าหลอกตา</div></div>
+      <div class="box"><div class="label">④ จุดส่งมอบ</div><div style="font-size:12.5px;line-height:1.6">วางแล้วลูกค้าเดินมารับเองตามคิว รับพร้อมกันได้ 2 คน</div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>4 · ตัวละคร</h2>
+    <p>วาดจากสี่เหลี่ยมพิกเซลล้วน เปลี่ยนสีได้ทั้งชุด ผิว ผม ไม่มีไฟล์ภาพภายนอก</p>
+    <canvas id="people" class="show" width="720" height="150" style="max-width:100%"></canvas>
+  </div>
+
+  <div class="sec">
+    <h2>5 · ของในร้านและแถบรอ</h2>
+    <canvas id="items" class="show" width="720" height="120" style="max-width:100%"></canvas>
+    <p style="margin-top:10px">แถบความอดทนกว้าง 10 พิกเซล เขียว → เหลือง → แดง ต้องอ่านออกว่าใครใกล้เดินออกโดยไม่ต้องเพ่ง</p>
+  </div>
+
+  <div class="sec">
+    <h2>6 · ชิ้นส่วน UI</h2>
+    <div class="mini-hud" style="margin-bottom:12px">
+      <span class="chip solo">วัน 3/7</span>
+      <span class="chip"><i>เงินสด</i><b>3,485฿</b></span>
+      <span class="chip"><i>ยอดวันนี้</i><b>520฿</b></span>
+      <span class="chip"><i>สต็อก</i><b class="low">2 / 5</b></span>
+      <span class="chip"><i>เรตติ้ง</i><b>3.2 ★</b></span>
+    </div>
+    <div class="timer" style="margin-bottom:12px"><div class="timer-fill" style="width:62%"></div><span>9.3s</span></div>
+    <div class="stations" style="margin-bottom:12px">
+      <button class="sbtn"><i>1</i>แคชเชียร์</button>
+      <button class="sbtn"><i>2</i>เครื่องกาแฟ</button>
+      <button class="sbtn"><i>3</i>จุดหยิบแก้ว</button>
+      <button class="sbtn alert"><i>4</i>จุดส่งมอบ</button>
+    </div>
+    <div class="hint on" style="margin-bottom:12px">แตะจุดส่งมอบ แล้ววางไว้ ลูกค้าจะเดินมารับเอง</div>
+    <div class="sheet-foot two" style="max-width:360px">
+      <button class="btn">เก็บเงินสดไว้</button>
+      <button class="btn primary">ลงทุนขยายต่อ</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>7 · สรุปกติกาที่ใช้ตัดสินใจ</h2>
+    <p class="do">ตัวพิกเซลใช้กับ EGG TOKEN, DAY 3 / 7, E.TOKEN — ของสั้นและเป็นป้าย</p>
+    <p class="do">เวลา เงิน จำนวนคน ใช้ฟอนต์ปกติ ตัวหนา เลขความกว้างเท่ากัน</p>
+    <p class="do">สีบอกสถานะต้องต่างกันพอในทุกธีม เขียว เหลือง แดง ใช้ชุดเดียวกันทั้งเกม</p>
+    <p class="dont">ไม่เอาตัวพิกเซลมาใช้กับประโยคไทยยาว ๆ หรือคำสั่งที่ต้องอ่านตอนคิวแน่น</p>
+    <p class="dont">ไม่ใช้สีธีมมาแทนสีบอกสถานะ ธีมไซเบอร์พังก์สีจัดอยู่แล้ว แถบรอจะกลืน</p>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/world.js"></script>
+<script>
+let themeKey = 'modern';
+
+function applyThemeCI(t) {
+  const r = document.documentElement;
+  r.style.setProperty('--bg', t.ui.bg);
+  r.style.setProperty('--panel', t.ui.panel);
+  r.style.setProperty('--text', t.ui.text);
+  r.style.setProperty('--sub', t.ui.sub);
+  r.style.setProperty('--accent', t.ui.accent);
+  r.style.setProperty('--line', t.ui.line);
+  r.style.setProperty('--accent-ink', t.key === 'cyber' ? '#0c0a18' : '#ffffff');
+  document.body.dataset.theme = t.key;
+}
+
+function swatches(el, obj) {
+  el.innerHTML = Object.keys(obj).map(k =>
+    `<div class="sw"><i style="background:${obj[k]}"></i><span>${k}</span><code>${obj[k]}</code></div>`).join('');
+}
+
+function drawRoomCI() {
+  const c = document.getElementById('room');
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.save();
+  ctx.scale(2, 2);
+  const pal = THEMES[themeKey].pal;
+  drawRoom(ctx, pal, { machine: [{ busy: true }] });
+  drawStationBadges(ctx, pal);
+  // ของตัวอย่างบนเคาน์เตอร์และชั้นพัก
+  const item = SHOPS.coffee.item;
+  drawArt(ctx, item, TRAY_TILE[0] * TILE - 4, TRAY_TILE[1] * TILE + 5, 1);
+  drawArt(ctx, item, TRAY_TILE[0] * TILE + 2, TRAY_TILE[1] * TILE + 5, 1);
+  drawArt(ctx, item, STATIONS.handoff.obj[0] * TILE + 1, 4 * TILE + 3, 1);
+  drawArt(ctx, 'crate', DOOR_TILE[0] * TILE + 4, DOOR_TILE[1] * TILE + 4, 1);
+  // ตัวละครตัวอย่าง
+  const t = THEMES[themeKey];
+  drawPerson(ctx, STATIONS.cashier.stand[0] * TILE, STATIONS.cashier.stand[1] * TILE - 5, OWNER_PAL, 'down', 0, { apron: true });
+  drawPerson(ctx, STATIONS.cashier.cust[0] * TILE, STATIONS.cashier.cust[1] * TILE - 5, t.people[0], 'up', 0, {});
+  drawBar(ctx, STATIONS.cashier.cust[0] * TILE + 3, STATIONS.cashier.cust[1] * TILE - 12, 10, 0.72);
+  drawPerson(ctx, 2 * TILE, 2 * TILE - 5, STAFF_PAL, 'down', 1, { apron: true });
+  drawPerson(ctx, 5 * TILE, 6 * TILE - 5, t.people[1], 'up', 0, {});
+  drawBar(ctx, 5 * TILE + 3, 6 * TILE - 12, 10, 0.34);
+  drawPerson(ctx, 8 * TILE, 9 * TILE - 5, RIDER_PAL, 'down', 0, { helmet: RIDER_PAL.helmet });
+  ctx.restore();
+}
+
+function drawPeopleCI() {
+  const c = document.getElementById('people');
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, c.width, c.height);
+  const t = THEMES[themeKey];
+  const cast = [
+    ['เจ้าของ', OWNER_PAL, { apron: true }],
+    ['พนักงาน', STAFF_PAL, { apron: true }],
+    ['ไรเดอร์', RIDER_PAL, { helmet: RIDER_PAL.helmet }],
+    ['ลูกค้า 1', t.people[0], {}],
+    ['ลูกค้า 2', t.people[1], {}],
+    ['ลูกค้า 3', t.people[2], {}],
+    ['ลูกค้า 4', t.people[3], {}]
+  ];
+  ctx.save();
+  ctx.scale(3, 3);
+  const faces = ['down', 'left', 'right', 'up'];
+  cast.forEach((row, i) => {
+    faces.forEach((f, j) => {
+      drawPerson(ctx, i * 34 + (j % 2) * 17, (j < 2 ? 2 : 22), row[1], f, j % 2, row[2]);
+    });
+  });
+  ctx.restore();
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--sub');
+  ctx.font = '11px "IBM Plex Sans Thai", sans-serif';
+  ctx.textAlign = 'left';
+  cast.forEach((row, i) => ctx.fillText(row[0], i * 102 + 2, 136));
+}
+
+function drawItemsCI() {
+  const c = document.getElementById('items');
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, c.width, c.height);
+  const names = ['cup', 'bowl', 'burger', 'coin', 'crate', 'ticket', 'bag'];
+  ctx.save();
+  ctx.scale(4, 4);
+  names.forEach((n, i) => drawArt(ctx, n, i * 11 + 1, 2, 1));
+  drawBike(ctx, names.length * 11 + 2, 2, '#17a34a');
+  [1, .62, .34, .12].forEach((v, i) => drawBar(ctx, i * 14 + 2, 14, 10, v));
+  ctx.restore();
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--sub');
+  ctx.font = '11px "IBM Plex Sans Thai", sans-serif';
+  ctx.fillText('ของในร้าน · มอเตอร์ไซค์ไรเดอร์', 4, 100);
+  ctx.fillText('แถบความอดทน 100% → 12%', 240, 100);
+}
+
+function drawThaiPixel() {
+  const c = document.getElementById('thai-pixel');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  const ink = getComputedStyle(document.body).getPropertyValue('--text').trim();
+  const small = document.createElement('canvas');
+  small.width = 130; small.height = 38;
+  const s = small.getContext('2d');
+  s.fillStyle = ink;
+  s.font = '600 11px "IBM Plex Sans Thai", sans-serif';
+  s.fillText('เปิดร้านวันแรก', 2, 12);
+  s.font = '600 9px "IBM Plex Sans Thai", sans-serif';
+  s.fillText('คิวแน่น ลูกค้าจะเดินออก', 2, 26);
+  ctx.imageSmoothingEnabled = false;
+  const ys = [0, 44, 126];
+  [1, 2, 3].forEach((k, i) => {
+    ctx.drawImage(small, 0, 0, 130, 38, 0, ys[i], 130 * k, 38 * k);
+  });
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--sub');
+  ctx.font = '11px "IBM Plex Sans Thai", sans-serif';
+  ['x1 ต้นฉบับ', 'x2', 'x3'].forEach((t, i) => ctx.fillText(t, 408, 14 + [0, 44, 126][i]));
+}
+
+function render() {
+  const t = THEMES[themeKey];
+  applyThemeCI(t);
+  document.getElementById('theme-desc').textContent = t.name + ' — ' + t.desc +
+    ' · ลูกค้ามากลุ่มละ ' + (t.group[0] === t.group[1] ? t.group[0] : t.group[0] + '–' + t.group[1]) +
+    ' คน · ความอดทน ×' + t.patience;
+  swatches(document.getElementById('pal-game'), t.pal);
+  swatches(document.getElementById('pal-ui'), t.ui);
+  document.getElementById('s2-note').textContent =
+    'ร้านกาแฟกดเริ่มชงล่วงหน้าได้ถ้าเครื่องว่าง ส่วนราเมงและเบอร์เกอร์ใช้ส่งตั๋วเข้าครัวเมื่อมีออเดอร์';
+  drawRoomCI(); drawPeopleCI(); drawItemsCI();
+  setTimeout(drawThaiPixel, 60);
+}
+
+const bar = document.getElementById('theme-bar');
+bar.innerHTML = Object.values(THEMES).map(t =>
+  `<button class="pill" data-k="${t.key}">${t.name}</button>`).join('');
+bar.querySelectorAll('.pill').forEach(b => b.addEventListener('click', () => {
+  themeKey = b.dataset.k;
+  bar.querySelectorAll('.pill').forEach(x => x.classList.toggle('on', x.dataset.k === themeKey));
+  render();
+}));
+bar.querySelector('.pill').classList.add('on');
+
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+render();
+</script>
+</body>
+</html>

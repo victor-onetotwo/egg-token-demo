@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "egg-token-demo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["dev_server.py", "8777"],
+      "port": 8777
+    }
+  ]
+}

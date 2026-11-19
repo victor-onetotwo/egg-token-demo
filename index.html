@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Egg Token · เกมบริหารร้าน (เดโม)</title>
+<meta name="description" content="เดโมเกมบริหารร้านแบบ Pixel Art — ลงมือทำเองก่อน แล้วค่อยตัดสินใจว่าจะจ้างคน ซื้ออุปกรณ์ หรือใช้ E.Token ตรงไหน">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body data-theme="modern">
+
+<div class="wrap">
+  <header class="hud">
+    <div class="hud-row">
+      <span class="chip solo" id="hud-day">วัน 1/7</span>
+      <span class="chip"><i>เงินสด</i><b id="hud-cash">0฿</b></span>
+      <span class="chip"><i>ยอดวันนี้</i><b id="hud-sales">0฿</b></span>
+      <span class="chip"><i>สต็อก</i><b id="hud-stock">0 / 0</b></span>
+      <span class="chip hidden"><i>เรตติ้ง</i><b id="hud-rating">0.0</b></span>
+      <span class="chip"><i>เสิร์ฟ</i><b id="hud-served">0</b></span>
+      <span class="chip"><i>เดินออก</i><b id="hud-left">0</b></span>
+    </div>
+    <div class="timer"><div class="timer-fill" id="hud-bar"></div><span id="hud-clock">15.0s</span></div>
+    <div class="hud-row end">
+      <button id="hud-token" class="btn token">E.Token ×3</button>
+      <button id="hud-mute" class="btn icon" title="เสียง">🔊</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <canvas id="game" width="192" height="192" aria-label="หน้าร้าน"></canvas>
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <div id="hint" class="hint">แตะสถานีหรือตัวลูกค้าเพื่อสั่งงาน · ตัวละครต้องเดินไปถึงก่อน งานจึงเริ่ม</div>
+
+  <div id="stations" class="stations"></div>
+</div>
+
+<div id="overlay" class="overlay hidden"><div id="sheet" class="sheet"></div></div>
+
+<script src="js/config.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/actors.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

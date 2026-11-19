@@ -1,0 +1,285 @@
+/* ===========================================================
+   Egg Token Demo — หน้าตา
+   ตัวพิกเซลใช้กับหัวข้อและป้ายเท่านั้น
+   เวลา เงิน แถบรอ และคำสั่ง ใช้ฟอนต์ที่อ่านออกทันที
+   =========================================================== */
+
+:root {
+  --bg: #f3f3f3;
+  --panel: #ffffff;
+  --text: #161616;
+  --sub: #6a6a6a;
+  --accent: #161616;
+  --accent-ink: #ffffff;
+  --line: #d8d8d8;
+  --pos: #1f9254;
+  --neg: #d4453c;
+  --radius: 14px;
+  --pixel: 'Press Start 2P', 'Courier New', monospace;
+  --sans: 'IBM Plex Sans Thai', 'Noto Sans Thai', 'Leelawadee UI', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+body { min-height: 100svh; }
+
+.wrap {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 10px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- HUD ---------- */
+.hud { display: flex; flex-direction: column; gap: 6px; }
+
+.hud-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hud-row.end { justify-content: space-between; }
+
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.chip i { color: var(--sub); font-style: normal; font-size: 11px; }
+.chip b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.chip.solo { font-weight: 700; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip b.low, #hud-stock.low { color: var(--neg); }
+
+.timer {
+  position: relative;
+  height: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.timer-fill {
+  position: absolute; inset: 0 auto 0 0;
+  width: 100%;
+  background: var(--accent);
+  opacity: .22;
+  transition: width .08s linear;
+}
+.timer span {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- จอเล่น ---------- */
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: manipulation;
+}
+
+.toast {
+  position: absolute;
+  left: 8px; right: 8px;
+  top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(16,16,16,.82);
+  color: #fff;
+}
+.hint {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  background: var(--panel);
+  color: var(--sub);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.hint.on {
+  border-left-color: #ffb020;
+  color: var(--text);
+  font-weight: 600;
+}
+.hidden { display: none !important; }
+
+/* ---------- ปุ่มสถานี ---------- */
+.stations { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sbtn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 4px 7px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer;
+}
+.sbtn i {
+  font-family: var(--pixel);
+  font-style: normal;
+  font-size: 9px;
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.sbtn:active { transform: translateY(1px); }
+.sbtn.alert { border-color: #ffb020; box-shadow: 0 0 0 2px rgba(255,176,32,.35); }
+#door-btn { grid-column: span 4; flex-direction: row; justify-content: center; }
+
+.foot { margin: 2px 0 0; font-size: 11px; color: var(--sub); text-align: center; }
+
+/* ---------- ปุ่มทั่วไป ---------- */
+.btn {
+  appearance: none;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.token { font-size: 13px; padding: 8px 14px; border-color: var(--accent); }
+.btn.icon { padding: 8px 10px; font-size: 15px; }
+.btn.sm { padding: 6px 12px; font-size: 16px; min-width: 40px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ---------- แผ่นซ้อน ---------- */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,10,14,.55);
+  display: grid; place-items: end center;
+  padding: 12px;
+  z-index: 20;
+  overflow: auto;
+}
+.sheet {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 16px 16px;
+  margin: auto 0 0;
+  max-height: calc(100svh - 24px);
+  overflow: auto;
+}
+.sheet-head { margin-bottom: 12px; }
+.kicker {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.kicker .pix {
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: .5px;
+}
+.sheet h1 { font-size: 20px; margin: 0 0 6px; line-height: 1.35; }
+.sheet h2 { font-size: 13px; margin: 0 0 8px; color: var(--sub); font-weight: 600; }
+.lead { margin: 0; font-size: 13px; line-height: 1.65; color: var(--sub); }
+
+.group { margin-bottom: 14px; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cards.col { grid-template-columns: 1fr; }
+.card {
+  appearance: none;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  font-family: var(--sans);
+  color: var(--text);
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.card.wide { padding: 12px; }
+.card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.card-icon { font-size: 18px; }
+.card-title { font-size: 13px; font-weight: 700; }
+.card-sub { font-size: 11px; color: var(--sub); line-height: 1.5; }
+.swatch { display: flex; gap: 2px; margin-bottom: 2px; }
+.swatch i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); }
+
+.facts { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+.facts b { font-variant-numeric: tabular-nums; }
+
+.rows { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; margin-bottom: 10px; }
+.rows.small { font-size: 12px; }
+.row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row span { color: var(--sub); }
+.row b { font-variant-numeric: tabular-nums; }
+.row.total b { font-size: 15px; }
+.pos { color: var(--pos); }
+.neg { color: var(--neg); }
+
+.note { font-size: 12px; color: var(--sub); line-height: 1.7; margin: 0 0 10px; }
+.note.warn { color: var(--neg); }
+
+.stepper {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+}
+.stepper-info { display: flex; flex-direction: column; gap: 2px; }
+.stepper-info b { font-size: 14px; }
+.stepper-info span { font-size: 11px; color: var(--sub); }
+.stepper-ctl { display: flex; align-items: center; gap: 8px; }
+.stepper-ctl span { min-width: 28px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.sheet-foot { margin-top: 14px; display: grid; gap: 8px; }
+.sheet-foot.two { grid-template-columns: 1fr 1fr; }
+.sheet-foot .btn { width: 100%; }
+
+@media (min-width: 520px) {
+  .wrap { max-width: 480px; padding-top: 16px; }
+  .sheet { margin: auto; }
+  .overlay { place-items: center; }
+}
