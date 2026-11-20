@@ -94,6 +94,10 @@ function findPath(zone, from, to) {
 }
 
 /* ---------- วาดห้อง ---------- */
+/* ธีมพื้นมืด (ธีมที่มี pal.rim) จะพลิกเฉดที่ควรจะเข้มให้สว่างขึ้นแทน
+   ของในร้านจะได้ไม่จมหายไปกับพื้น */
+function deep(pal, hex, amt) { return shade(hex, pal.rim ? Math.round(-amt * 0.6) : amt); }
+
 function drawRoom(ctx, pal, state) {
   // พื้นฝั่งพนักงาน
   for (let y = 1; y <= 3; y++) {
@@ -128,8 +132,8 @@ function drawRoom(ctx, pal, state) {
   const mx = MACHINE_TILES[0][0] * TILE, my = MACHINE_TILES[0][1] * TILE;
   px(ctx, mx, my + 2, TILE * 2, TILE - 2, pal.machine);
   px(ctx, mx, my + 2, TILE * 2, 2, shade(pal.machine, 36));
-  px(ctx, mx + 3, my + 6, 5, 6, shade(pal.machine, -28));
-  px(ctx, mx + 19, my + 6, 5, 6, shade(pal.machine, -28));
+  px(ctx, mx + 3, my + 6, 5, 6, deep(pal, pal.machine, -28));
+  px(ctx, mx + 19, my + 6, 5, 6, deep(pal, pal.machine, -28));
   for (let i = 0; i < (state.machine ? state.machine.length : 1); i++) {
     const lit = state.machine && state.machine[i] && state.machine[i].busy;
     px(ctx, mx + 4 + i * 16, my + 4, 3, 2, lit ? '#ffcf4d' : pal.machineLit);
@@ -137,17 +141,17 @@ function drawRoom(ctx, pal, state) {
 
   // ช่องของออก / จุดหยิบ
   const tx = TRAY_TILE[0] * TILE, ty = TRAY_TILE[1] * TILE;
-  px(ctx, tx - 2, ty + 4, TILE + 4, TILE - 4, shade(pal.counter, -18));
+  px(ctx, tx - 2, ty + 4, TILE + 4, TILE - 4, deep(pal, pal.counter, -18));
   px(ctx, tx - 2, ty + 4, TILE + 4, 2, pal.counterEdge);
 
   // เคาน์เตอร์
   const cy = 4 * TILE;
   px(ctx, 0, cy, VIEW, TILE, pal.counter);
   px(ctx, 0, cy, VIEW, 2, pal.counterEdge);
-  px(ctx, 0, cy + TILE - 2, VIEW, 2, shade(pal.counter, -40));
+  px(ctx, 0, cy + TILE - 2, VIEW, 2, deep(pal, pal.counter, -40));
   // จุดแคชเชียร์
   const sx = STATIONS.cashier.obj[0] * TILE;
-  px(ctx, sx + 2, cy + 3, TILE - 4, TILE - 7, shade(pal.counter, -55));
+  px(ctx, sx + 2, cy + 3, TILE - 4, TILE - 7, deep(pal, pal.counter, -55));
   px(ctx, sx + 4, cy + 5, TILE - 8, 3, pal.accent);
   // จุดส่งมอบ กว้าง 2 ช่อง ให้ลูกค้ามารับพร้อมกันได้
   const hx = STATIONS.handoff.obj[0] * TILE;
@@ -158,7 +162,7 @@ function drawRoom(ctx, pal, state) {
   // กระจกหน้าร้าน + ทางเข้า
   px(ctx, 0, 11 * TILE + TILE - 2, VIEW, 2, pal.glass);
   px(ctx, ENTRY_X * TILE - 2, 11 * TILE + TILE - 2, TILE + 4, 2, pal.floor);
-  px(ctx, ENTRY_X * TILE + 2, 11 * TILE + 4, TILE - 4, TILE - 6, shade(pal.rug, -10));
+  px(ctx, ENTRY_X * TILE + 2, 11 * TILE + 4, TILE - 4, TILE - 6, deep(pal, pal.rug, -10));
 }
 
 /* ===========================================================
@@ -190,15 +194,15 @@ function drawTableSet(ctx, x, y, pal) {
 function drawShelf(ctx, x, y, pal, item) {
   const w = pal.wood || '#b08968';
   px(ctx, x, y + 7, 22, 2, w);
-  px(ctx, x + 2, y + 2, 4, 5, shade(pal.counter, -18));
-  px(ctx, x + 8, y + 1, 5, 6, shade(pal.counter, -8));
+  px(ctx, x + 2, y + 2, 4, 5, deep(pal, pal.counter, -18));
+  px(ctx, x + 8, y + 1, 5, 6, deep(pal, pal.counter, -8));
   px(ctx, x + 15, y + 3, 5, 4, pal.accent2);
   if (item) drawArt(ctx, item, x + 7, y, 1);
 }
 
 function drawMenuBoard(ctx, x, y, pal) {
   px(ctx, x, y, 34, 13, shade(pal.wall, 30));
-  px(ctx, x + 1, y + 1, 32, 11, shade(pal.wall, -14));
+  px(ctx, x + 1, y + 1, 32, 11, deep(pal, pal.wall, -14));
   for (let i = 0; i < 3; i++) {
     px(ctx, x + 3, y + 3 + i * 3, 16 - i * 3, 1, pal.counter);
     px(ctx, x + 26, y + 3 + i * 3, 5, 1, pal.neon || '#f0c13b');
@@ -206,16 +210,16 @@ function drawMenuBoard(ctx, x, y, pal) {
 }
 
 function drawSink(ctx, x, y, pal) {
-  px(ctx, x, y + 4, 20, 10, shade(pal.counter, -22));
-  px(ctx, x + 2, y + 6, 16, 6, shade(pal.counter, -45));
+  px(ctx, x, y + 4, 20, 10, deep(pal, pal.counter, -22));
+  px(ctx, x + 2, y + 6, 16, 6, deep(pal, pal.counter, -45));
   px(ctx, x + 9, y + 1, 2, 5, pal.counterEdge);
   px(ctx, x + 9, y + 1, 5, 2, pal.counterEdge);
 }
 
 function drawBin(ctx, x, y, pal) {
-  px(ctx, x + 4, y + 5, 9, 10, shade(pal.counter, -40));
-  px(ctx, x + 3, y + 3, 11, 3, shade(pal.counter, -20));
-  px(ctx, x + 7, y + 1, 3, 2, shade(pal.counter, -20));
+  px(ctx, x + 4, y + 5, 9, 10, deep(pal, pal.counter, -40));
+  px(ctx, x + 3, y + 3, 11, 3, deep(pal, pal.counter, -20));
+  px(ctx, x + 7, y + 1, 3, 2, deep(pal, pal.counter, -20));
 }
 
 function drawSign(ctx, x, y, pal) {
@@ -231,7 +235,7 @@ function drawSign(ctx, x, y, pal) {
 function drawLamp(ctx, x, y, pal, lit) {
   px(ctx, x + 7, 0, 2, y, shade(pal.wall, 34));
   px(ctx, x + 3, y, 10, 3, pal.accent2);
-  px(ctx, x + 5, y + 3, 6, 2, lit ? (pal.neon || '#ffd34d') : shade(pal.counter, -20));
+  px(ctx, x + 5, y + 3, 6, 2, lit ? (pal.neon || '#ffd34d') : deep(pal, pal.counter, -20));
 }
 
 function drawClock(ctx, x, y, pal, t) {

@@ -98,7 +98,7 @@ function nextDay() {
   for (let i = 0; i < slots; i++) G.machine.push({ busy: false, t: 0, done: false });
 
   // ตัวละครฝั่งพนักงาน
-  G.player = new Worker([5, 3], OWNER_PAL, 'owner');
+  G.player = new Worker([5, 3], crewPal(G.theme, 'owner'), 'owner');
   G.staff = [];
   if (G.flags.hired) G.staff.push(makeStaff([8, 3]));
   if (G.flags.hired2) G.staff.push(makeStaff([4, 2]));
@@ -136,7 +136,7 @@ function nextDay() {
 }
 
 function makeStaff(tile) {
-  const w = new Worker(tile, STAFF_PAL, 'staff');
+  const w = new Worker(tile, crewPal(G.theme, 'staff'), 'staff');
   w.trained = G.flags.trained;
   return w;
 }
@@ -294,7 +294,7 @@ function pop(x, y, text, color) { G.pops.push({ x, y, text, color: color || '#ff
 /* ---------- ลูกค้า ---------- */
 function spawnGroup(g) {
   for (let i = 0; i < g.size; i++) {
-    const pal = g.rider ? RIDER_PAL : G.theme.people[Math.floor(Math.random() * G.theme.people.length)];
+    const pal = g.rider ? crewPal(G.theme, 'rider') : G.theme.people[Math.floor(Math.random() * G.theme.people.length)];
     const c = new Customer(pal, g.rider);
     c.qty = rollOrderQty();
     c.delay = i * 0.28;
@@ -1060,6 +1060,7 @@ function applyTheme(theme) {
   r.style.setProperty('--accent', theme.ui.accent);
   r.style.setProperty('--line', theme.ui.line);
   r.style.setProperty('--accent-ink', theme.key === 'cyber' ? '#0c0a18' : (theme.key === 'sweet' ? '#ffffff' : '#ffffff'));
+  PERSON_RIM = theme.pal.rim || null;
   document.body.dataset.theme = theme.key;
 }
 

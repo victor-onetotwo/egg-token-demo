@@ -142,21 +142,31 @@ const THEMES = {
     desc: 'ร้านและตัวละครสีฉูดฉาด วัยรุ่นมากันกลุ่มละ 4–6 คน',
     short: 'นีออน · มากลุ่มละ 4–6 คน',
     group: [4, 6], patience: 1.0,
+    /* โทนมืดแบบ dark mode แต่ไม่ดำสนิท พื้นเป็นม่วงน้ำเงินกลาง ๆ
+       ของทุกอย่างบนพื้นจึงยังตัดกันเห็นชัด */
     pal: {
-      floor: '#1d1336', floorAlt: '#251845', rug: '#2e1d58',
-      wall: '#0e0a1f', wallTop: '#1a1136',
-      counter: '#2b1b52', counterEdge: '#00e5ff',
-      machine: '#3a2070', machineLit: '#ff2fd0',
-      accent: '#00e5ff', accent2: '#ff2fd0',
-      glass: '#163a4d', plant: '#2fd9a0', pot: '#3a2a6a', wood: '#4a2f7a', neon: '#ffe14d'
+      floor: '#2e2457', floorAlt: '#372b66', rug: '#4a3a8c',
+      wall: '#1d1740', wallTop: '#2b2159',
+      counter: '#3c2d75', counterEdge: '#49f2ff',
+      machine: '#56399f', machineLit: '#ff7ae8',
+      accent: '#49f2ff', accent2: '#ff6ae0',
+      glass: '#2f6a86', plant: '#4dffbe', pot: '#6a51b8', wood: '#7a5bc4', neon: '#ffe14d',
+      rim: '#dff2ff',      // ขอบเรืองแสงรอบตัวละคร ให้คนที่ขยับเด่นออกจากพื้น
+      ink: '#140f2a'       // สีเส้นหน้าและรองเท้า เข้มกว่าพื้นชัดเจน
     },
-    ui: { bg: '#140e28', panel: '#1e1540', text: '#e8f6ff', sub: '#9b8ccc', accent: '#00e5ff', line: '#33265e' },
+    ui: { bg: '#1f1850', panel: '#2b2366', text: '#f3f8ff', sub: '#c0b2f0', accent: '#49f2ff', line: '#453a8c' },
     people: [
-      { skin: '#e8b48a', hair: '#00e5ff', shirt: '#ff2fd0', pants: '#241a44' },
-      { skin: '#b9794f', hair: '#b4ff3b', shirt: '#6a2fff', pants: '#1e1838' },
-      { skin: '#f2cfae', hair: '#ff6a3d', shirt: '#00ffa3', pants: '#2a2050' },
-      { skin: '#8d5a3b', hair: '#ffe14d', shirt: '#2f6bff', pants: '#1b1736' }
-    ]
+      { skin: '#f6c69c', hair: '#49f2ff', shirt: '#ff4fd8', pants: '#6a4fe0' },
+      { skin: '#d08a5c', hair: '#c9ff4d', shirt: '#8a5cff', pants: '#2fd3e8' },
+      { skin: '#ffdcba', hair: '#ff8a4d', shirt: '#45ffb8', pants: '#5a7cff' },
+      { skin: '#a56a46', hair: '#ffe14d', shirt: '#4f9bff', pants: '#c25ce8' }
+    ],
+    /* ชุดเจ้าของ ลูกจ้าง และไรเดอร์ เปลี่ยนเป็นสีนีออนเฉพาะธีมนี้ */
+    crew: {
+      owner: { skin: '#f6cfa8', hair: '#ff5fa8', shirt: '#ff7a2f', pants: '#4a3f8c' },
+      staff: { skin: '#f0cba6', hair: '#2a2340', shirt: '#2fd3e8', pants: '#3f3880' },
+      rider: { skin: '#e8bd8d', hair: '#201d30', shirt: '#39ff88', pants: '#2f5a46', helmet: '#39ff88' }
+    }
   }
 };
 
@@ -164,6 +174,13 @@ const THEMES = {
 const STAFF_PAL = { skin: '#eac39b', hair: '#241a12', shirt: '#2f6f8f', pants: '#2b2f36', apron: true };
 const OWNER_PAL = { skin: '#f3cba4', hair: '#3a2416', shirt: '#b7452f', pants: '#2b2f36', apron: true };
 const RIDER_PAL = { skin: '#e0b183', hair: '#1c1c1c', shirt: '#17a34a', pants: '#1f2a24', helmet: '#17a34a' };
+
+/* ชุดทีมงานของธีมนั้น ๆ ถ้าธีมไม่ได้กำหนดไว้ ใช้ชุดมาตรฐาน */
+function crewPal(theme, who) {
+  const base = who === 'owner' ? OWNER_PAL : who === 'staff' ? STAFF_PAL : RIDER_PAL;
+  const over = theme && theme.crew && theme.crew[who];
+  return over ? Object.assign({}, base, over) : base;
+}
 
 /* ---------- ค่าเกม ---------- */
 const RULES = {

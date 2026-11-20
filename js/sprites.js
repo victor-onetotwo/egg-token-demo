@@ -22,9 +22,13 @@ function shade(hex, amt) {
 
 /* ---------- ตัวละคร 16x16 เท้าอยู่ขอบล่าง ---------- */
 /* facing: 'down' | 'up' | 'left' | 'right'   frame: 0|1 (ขาสลับ) */
+/* สีขอบตัวละครของธีมที่พื้นมืด ตั้งค่าจาก applyTheme (null = ไม่วาดขอบ) */
+let PERSON_RIM = null;
+
 function drawPerson(ctx, x, y, pal, facing, frame, opt) {
   opt = opt || {};
-  const dark = '#1b1620';
+  const dark = pal.ink || '#1b1620';
+  const rim = opt.rim || PERSON_RIM;
   const skin = pal.skin, hair = pal.hair, shirt = pal.shirt, pants = pal.pants;
   const side = facing === 'left' || facing === 'right';
   const bob = frame ? 1 : 0;
@@ -34,23 +38,52 @@ function drawPerson(ctx, x, y, pal, facing, frame, opt) {
   px(ctx, x + 4, y + 15, 8, 1, '#000');
   ctx.globalAlpha = 1;
 
+  /* เก็บรูปทรงหลักไว้ก่อน เพื่อวาดขอบรอบตัวได้ในครั้งเดียว */
+  const body = [];
+  const add = (bx, by, bw, bh, c) => body.push([bx, by, bw, bh, c]);
+
   // ขา
   const legY = y + 12 - bob;
   if (frame === 0) {
-    px(ctx, x + 5, legY, 2, 3 + bob, pants);
-    px(ctx, x + 9, legY, 2, 3 + bob, pants);
+    add(x + 5, legY, 2, 3 + bob, pants);
+    add(x + 9, legY, 2, 3 + bob, pants);
   } else {
-    px(ctx, x + 4, legY, 2, 3 + bob, pants);
-    px(ctx, x + 10, legY, 2, 3 + bob, pants);
+    add(x + 4, legY, 2, 3 + bob, pants);
+    add(x + 10, legY, 2, 3 + bob, pants);
   }
-  px(ctx, x + 4, y + 15, 3, 1, dark);
-  px(ctx, x + 9, y + 15, 3, 1, dark);
+  add(x + 4, y + 15, 3, 1, dark);
+  add(x + 9, y + 15, 3, 1, dark);
 
   // ลำตัว
   const bodyY = y + 7 - bob;
-  px(ctx, x + 4, bodyY, 8, 5, shirt);
-  px(ctx, x + 3, bodyY + 1, 1, 3, shade(shirt, -22));   // แขนซ้าย
-  px(ctx, x + 12, bodyY + 1, 1, 3, shade(shirt, -22));  // แขนขวา
+  add(x + 4, bodyY, 8, 5, shirt);
+  add(x + 3, bodyY + 1, 1, 3, shade(shirt, -22));   // แขนซ้าย
+  add(x + 12, bodyY + 1, 1, 3, shade(shirt, -22));  // แขนขวา
+
+  // หัว
+  const headY = y + 2 - bob;
+  add(x + 4, headY, 8, 6, skin);
+  add(x + 4, headY - 1, 8, 2, hair);
+  if (side) {
+    add(facing === 'left' ? x + 4 : x + 11, headY, 1, 4, hair);
+  } else {
+    add(x + 3, headY, 1, 4, hair);
+    add(x + 12, headY, 1, 4, hair);
+  }
+  if (opt.helmet) {
+    add(x + 3, headY - 2, 10, 4, opt.helmet);
+    add(x + 3, headY + 1, 10, 1, shade(opt.helmet, -40));
+  }
+
+  // ขอบรอบตัว วาดทรงเดิมขยายออก 1 พิกเซลก่อน แล้วทับด้วยตัวจริง
+  if (rim) {
+    ctx.globalAlpha = 0.78;
+    for (const b of body) px(ctx, b[0] - 1, b[1] - 1, b[2] + 2, b[3] + 2, rim);
+    ctx.globalAlpha = 1;
+  }
+  for (const b of body) px(ctx, b[0], b[1], b[2], b[3], b[4]);
+
+  // ผ้ากันเปื้อนและเสื้อกั๊ก วาดทับลำตัว
   if (opt.apron) {
     px(ctx, x + 5, bodyY + 2, 6, 3, shade(shirt, 52));
     px(ctx, x + 6, bodyY + 1, 4, 1, shade(shirt, 52));
@@ -58,17 +91,6 @@ function drawPerson(ctx, x, y, pal, facing, frame, opt) {
   if (opt.vest) {
     px(ctx, x + 4, bodyY, 2, 5, opt.vest);
     px(ctx, x + 10, bodyY, 2, 5, opt.vest);
-  }
-
-  // หัว
-  const headY = y + 2 - bob;
-  px(ctx, x + 4, headY, 8, 6, skin);
-  px(ctx, x + 4, headY - 1, 8, 2, hair);
-  if (side) {
-    px(ctx, facing === 'left' ? x + 4 : x + 11, headY, 1, 4, hair);
-  } else {
-    px(ctx, x + 3, headY, 1, 4, hair);
-    px(ctx, x + 12, headY, 1, 4, hair);
   }
 
   // หน้า
@@ -82,12 +104,8 @@ function drawPerson(ctx, x, y, pal, facing, frame, opt) {
     px(ctx, x + 10, headY + 3, 1, 1, dark);
   }
 
-  // หมวกกันน็อกไรเดอร์
-  if (opt.helmet) {
-    px(ctx, x + 3, headY - 2, 10, 4, opt.helmet);
-    px(ctx, x + 3, headY + 1, 10, 1, shade(opt.helmet, -40));
-    if (facing === 'down') px(ctx, x + 5, headY + 2, 6, 2, '#1d2b26');
-  }
+  // กระจกหมวกกันน็อกไรเดอร์ ตัวหมวกวาดไปพร้อมรูปทรงหลักแล้ว
+  if (opt.helmet && facing === 'down') px(ctx, x + 5, headY + 2, 6, 2, '#1d2b26');
 }
 
 /* ---------- ของในร้าน ตาราง 8x8 ---------- */

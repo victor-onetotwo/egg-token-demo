@@ -153,6 +153,8 @@
     <p class="do">ตัวพิกเซลใช้กับ EGG TOKEN, DAY 3 / 7, E.TOKEN — ของสั้นและเป็นป้าย</p>
     <p class="do">เวลา เงิน จำนวนคน ใช้ฟอนต์ปกติ ตัวหนา เลขความกว้างเท่ากัน</p>
     <p class="do">สีบอกสถานะต้องต่างกันพอในทุกธีม เขียว เหลือง แดง ใช้ชุดเดียวกันทั้งเกม</p>
+    <p class=do>ธีมพื้นมืด ใช้ dark mode สีม่วงน้ำเงินกลาง ไม่ใช้ดำสนิท ของทุกชิ้นต้องตัดกับพื้นได้เอง</p>
+    <p class=do>ธีมพื้นมืดใส่ rim รอบตัวละคร คนที่ขยับจะเด่นกว่าฉากหลังเสมอ</p>
     <p class="dont">ไม่เอาตัวพิกเซลมาใช้กับประโยคไทยยาว ๆ หรือคำสั่งที่ต้องอ่านตอนคิวแน่น</p>
     <p class="dont">ไม่ใช้สีธีมมาแทนสีบอกสถานะ ธีมไซเบอร์พังก์สีจัดอยู่แล้ว แถบรอจะกลืน</p>
   </div>
@@ -173,6 +175,7 @@ function applyThemeCI(t) {
   r.style.setProperty('--accent', t.ui.accent);
   r.style.setProperty('--line', t.ui.line);
   r.style.setProperty('--accent-ink', t.key === 'cyber' ? '#0c0a18' : '#ffffff');
+  PERSON_RIM = t.pal.rim || null;
   document.body.dataset.theme = t.key;
 }
 
@@ -200,13 +203,14 @@ function drawRoomCI() {
   drawArt(ctx, 'crate', DOOR_TILE[0] * TILE + 4, DOOR_TILE[1] * TILE + 4, 1);
   // ตัวละครตัวอย่าง
   const t = THEMES[themeKey];
-  drawPerson(ctx, STATIONS.cashier.stand[0] * TILE, STATIONS.cashier.stand[1] * TILE - 5, OWNER_PAL, 'down', 0, { apron: true });
+  drawPerson(ctx, STATIONS.cashier.stand[0] * TILE, STATIONS.cashier.stand[1] * TILE - 5, crewPal(t, 'owner'), 'down', 0, { apron: true });
   drawPerson(ctx, STATIONS.cashier.cust[0] * TILE, STATIONS.cashier.cust[1] * TILE - 5, t.people[0], 'up', 0, {});
   drawBar(ctx, STATIONS.cashier.cust[0] * TILE + 3, STATIONS.cashier.cust[1] * TILE - 12, 10, 0.72);
-  drawPerson(ctx, 2 * TILE, 2 * TILE - 5, STAFF_PAL, 'down', 1, { apron: true });
+  drawPerson(ctx, 2 * TILE, 2 * TILE - 5, crewPal(t, 'staff'), 'down', 1, { apron: true });
   drawPerson(ctx, 5 * TILE, 6 * TILE - 5, t.people[1], 'up', 0, {});
   drawBar(ctx, 5 * TILE + 3, 6 * TILE - 12, 10, 0.34);
-  drawPerson(ctx, 8 * TILE, 9 * TILE - 5, RIDER_PAL, 'down', 0, { helmet: RIDER_PAL.helmet });
+  const rp = crewPal(t, 'rider');
+  drawPerson(ctx, 8 * TILE, 9 * TILE - 5, rp, 'down', 0, { helmet: rp.helmet });
   ctx.restore();
 }
 
@@ -217,9 +221,9 @@ function drawPeopleCI() {
   ctx.clearRect(0, 0, c.width, c.height);
   const t = THEMES[themeKey];
   const cast = [
-    ['เจ้าของ', OWNER_PAL, { apron: true }],
-    ['พนักงาน', STAFF_PAL, { apron: true }],
-    ['ไรเดอร์', RIDER_PAL, { helmet: RIDER_PAL.helmet }],
+    ['เจ้าของ', crewPal(t, 'owner'), { apron: true }],
+    ['พนักงาน', crewPal(t, 'staff'), { apron: true }],
+    ['ไรเดอร์', crewPal(t, 'rider'), { helmet: crewPal(t, 'rider').helmet }],
     ['ลูกค้า 1', t.people[0], {}],
     ['ลูกค้า 2', t.people[1], {}],
     ['ลูกค้า 3', t.people[2], {}],

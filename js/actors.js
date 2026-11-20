@@ -65,7 +65,7 @@ class Actor {
 /* ---------- ลูกค้า ---------- */
 class Customer extends Actor {
   constructor(pal, isRider) {
-    super([ENTRY_X, 12], 'cust', pal, isRider ? { helmet: RIDER_PAL.helmet } : {});
+    super([ENTRY_X, 12], 'cust', pal, isRider ? { helmet: pal.helmet || RIDER_PAL.helmet } : {});
     this.state = 'enter';
     this.patience = 1;
     this.qty = 1;          // จำนวนชิ้นในออเดอร์
